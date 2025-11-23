@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "loop_app",
-    "slug": "loop_app",
+    "name": "loop",
+    "slug": "loop",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "loopapp",
+    "scheme": "loop",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
