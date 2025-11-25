@@ -130,57 +130,87 @@ export const Colors = {
   },
 };
 
+/* --------------------------------------------- */
+/*                     FONTS                     */
+/*   (clé = noms utilisés dans useFonts())       */
+/* --------------------------------------------- */
+
 export const Fonts = {
-  light: "Poppins_300Light",
-  regular: "Poppins_400Regular",
-  medium: "Poppins_500Medium",
-  semibold: "Poppins_600SemiBold",
-  bold: "Poppins_700Bold",
+  thin: "Poppins_Thin",
+  thinItalic: "Poppins_ThinItalic",
+
+  extraLight: "Poppins_ExtraLight",
+  extraLightItalic: "Poppins_ExtraLightItalic",
+
+  light: "Poppins_Light",
+  lightItalic: "Poppins_LightItalic",
+
+  regular: "Poppins_Regular",
+  italic: "Poppins_Italic",
+
+  medium: "Poppins_Medium",
+  mediumItalic: "Poppins_MediumItalic",
+
+  semibold: "Poppins_SemiBold",
+  semiboldItalic: "Poppins_SemiBoldItalic",
+
+  bold: "Poppins_Bold",
+  boldItalic: "Poppins_BoldItalic",
+
+  extraBold: "Poppins_ExtraBold",
+  extraBoldItalic: "Poppins_ExtraBoldItalic",
+
+  black: "Poppins_Black",
+  blackItalic: "Poppins_BlackItalic",
 };
+
+/* --------------------------------------------- */
+/*                  TYPOGRAPHY                   */
+/* --------------------------------------------- */
 
 export const Typography = {
   // ---- DISPLAY / TITLES ----
 
   largeTitleBold: {
-    fontFamily: "Poppins_700Bold",
+    fontFamily: Fonts.bold,
     fontSize: 34,
     lineHeight: 46,
   },
   largeTitle: {
-    fontFamily: "Poppins_400Regular",
+    fontFamily: Fonts.regular,
     fontSize: 34,
     lineHeight: 46,
   },
 
   title1Bold: {
-    fontFamily: "Poppins_700Bold",
+    fontFamily: Fonts.bold,
     fontSize: 28,
     lineHeight: 38,
   },
   title1: {
-    fontFamily: "Poppins_400Regular",
+    fontFamily: Fonts.semibold,
     fontSize: 28,
     lineHeight: 38,
   },
 
   title2Bold: {
-    fontFamily: "Poppins_700Bold",
+    fontFamily: Fonts.bold,
     fontSize: 22,
     lineHeight: 30,
   },
   title2: {
-    fontFamily: "Poppins_400Regular",
+    fontFamily: Fonts.regular,
     fontSize: 22,
     lineHeight: 30,
   },
 
   title3Bold: {
-    fontFamily: "Poppins_700Bold",
+    fontFamily: Fonts.bold,
     fontSize: 20,
     lineHeight: 27,
   },
   title3: {
-    fontFamily: "Poppins_400Regular",
+    fontFamily: Fonts.regular,
     fontSize: 20,
     lineHeight: 27,
   },
@@ -188,39 +218,37 @@ export const Typography = {
   // ---- BODY TEXT ----
 
   bodyBold: {
-    fontFamily: "Poppins_700Bold",
+    fontFamily: Fonts.bold,
     fontSize: 17,
     lineHeight: 23,
   },
 
   bodyRegular: {
-    fontFamily: "Poppins_400Regular",
+    fontFamily: Fonts.regular,
     fontSize: 16,
     lineHeight: 23,
   },
 
   bodyMedium: {
-    fontFamily: "Poppins_500Medium",
+    fontFamily: Fonts.medium,
     fontSize: 16,
     lineHeight: 23,
   },
 
   bodyLight: {
-    fontFamily: "Poppins_300Light",
+    fontFamily: Fonts.light,
     fontSize: 16,
     lineHeight: 23,
   },
 
   bodyBoldItalic: {
-    fontFamily: "Poppins_700Bold",
+    fontFamily: Fonts.boldItalic,
     fontSize: 17,
-    fontStyle: "italic",
     lineHeight: 23,
   },
 
   bodyItalic: {
-    fontFamily: "Poppins_400Regular",
-    fontStyle: "italic",
+    fontFamily: Fonts.italic,
     fontSize: 17,
     lineHeight: 23,
   },
@@ -228,13 +256,13 @@ export const Typography = {
   // ---- SMALL TEXT ----
 
   smallSemibold: {
-    fontFamily: "Poppins_600SemiBold",
+    fontFamily: Fonts.semibold,
     fontSize: 14,
     lineHeight: 23,
   },
 
   smallLight: {
-    fontFamily: "Poppins_300Light",
+    fontFamily: Fonts.light,
     fontSize: 14,
     lineHeight: 20,
   },

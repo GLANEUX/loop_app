@@ -8,6 +8,7 @@ const config: StorybookConfig = {
     // stories à côté des composants
     "../components/**/*.stories.@(js|jsx|mjs|ts|tsx)",
     "../components/ui/**/*.stories.@(js|jsx|mjs|ts|tsx)",
+    "../components/layout/**/*.stories.@(js|jsx|mjs|ts|tsx)",
   ],
 
   addons: [
