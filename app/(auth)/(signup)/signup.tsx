@@ -13,16 +13,19 @@ import {
   ImageBackground,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export const SignupScreen: React.FC = () => {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
-  const [pseudo, setPseudo] = useState("");
+  // const [pseudo, setPseudo] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
@@ -31,7 +34,7 @@ export const SignupScreen: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const handleSignup = () => {
-    if (!pseudo || !email || !password || !passwordConfirm) {
+    if (/*!pseudo ||*/ !email || !password || !passwordConfirm) {
       setError("Veuillez remplir tous les champs.");
       return;
     }
@@ -41,8 +44,8 @@ export const SignupScreen: React.FC = () => {
     }
 
     setError(null);
-    console.log("Signup:", { pseudo, email, password });
-    router.replace("/(app)/home");
+    console.log("Signup:", { /*pseudo,*/ email, password });
+    router.replace("/(auth)/(onboarding)/choose-pseudo");
   };
 
   const goToLogin = () => router.push("/(auth)/(login)/login");
@@ -61,87 +64,88 @@ export const SignupScreen: React.FC = () => {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.container}
       >
-        {/* HEADER */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Bienvenue ! 👋</Text>
-          <Text style={styles.subtitle}>Prêt·e à créer la magie ?</Text>
-        </View>
-
-        {/* CARD OPAQUE */}
-        <View style={styles.card}>
-          {/* On peut afficher un message global si tu veux */}
-          {error && <Text style={styles.errorText}>{error}</Text>}
-
-          {/* PSEUDO */}
-          <AuthTextField
-            label="Pseudo"
-            value={pseudo}
-            onChangeText={setPseudo}
-            placeholder="Choisis un pseudo"
-            autoCapitalize="none"
-            // pas d’icône pour l’instant, tu pourras en mettre un plus tard
-            error={error}
-          />
-
-          {/* EMAIL */}
-          <AuthTextField
-            label="E-mail"
-            value={email}
-            onChangeText={setEmail}
-            placeholder="Entrez votre e-mail"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            LeftIcon={MailIcon}
-            error={error}
-          />
-
-          {/* PASSWORD */}
-          <AuthTextField
-            label="Mot de passe"
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Créer un mot de passe"
-            secureTextEntry={secure1}
-            autoCapitalize="none"
-            LeftIcon={KeyIcon}
-            RightIcon={secure1 ? CloseEyeIcon : OpenEyeIcon}
-            onToggleSecure={() => setSecure1((prev) => !prev)}
-            error={error}
-          />
-
-          {/* PASSWORD CONFIRM */}
-          <AuthTextField
-            label="Confirmer le mot de passe"
-            value={passwordConfirm}
-            onChangeText={setPasswordConfirm}
-            placeholder="Confirmer le mot de passe"
-            secureTextEntry={secure2}
-            autoCapitalize="none"
-            LeftIcon={KeyIcon}
-            RightIcon={secure2 ? CloseEyeIcon : OpenEyeIcon}
-            onToggleSecure={() => setSecure2((prev) => !prev)}
-            error={error}
-          />
-
-          {/* BUTTON SIGNUP */}
-          <ButtonLoop
-            label="Inscription"
-            variant="primary"
-            onPress={handleSignup}
-            style={{ marginTop: 12 }}
-          />
-
-          {/* SOCIAL */}
-          <SocialAuthSection onSelect={handleSocial} />
-
-          {/* ALREADY ACCOUNT */}
-          <View style={styles.registerRow}>
-            <Text style={styles.registerText}>Déjà un compte ? </Text>
-            <TouchableOpacity onPress={goToLogin}>
-              <Text style={styles.registerLink}>Se connecter</Text>
-            </TouchableOpacity>
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            {
+              paddingTop: insets.top,
+              paddingBottom: insets.bottom + 40,
+            },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.header}>
+            <Text style={styles.title}>Bienvenue ! 👋</Text>
+            <Text style={styles.subtitle}>Prêt·e à créer la magie ?</Text>
           </View>
-        </View>
+
+          <View style={styles.card}>
+            {error && <Text style={styles.errorText}>{error}</Text>}
+
+            {/* <AuthTextField
+              label="Pseudo"
+              value={pseudo}
+              onChangeText={setPseudo}
+              placeholder="Choisis un pseudo"
+              autoCapitalize="none"
+              error={error}
+            /> */}
+
+            <AuthTextField
+              label="E-mail"
+              value={email}
+              onChangeText={setEmail}
+              placeholder="Entrez votre e-mail"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              LeftIcon={MailIcon}
+              error={error}
+            />
+
+            <AuthTextField
+              label="Mot de passe"
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Créer un mot de passe"
+              secureTextEntry={secure1}
+              autoCapitalize="none"
+              LeftIcon={KeyIcon}
+              RightIcon={secure1 ? CloseEyeIcon : OpenEyeIcon}
+              onToggleSecure={() => setSecure1((prev) => !prev)}
+              error={error}
+            />
+
+            <AuthTextField
+              label="Confirmer le mot de passe"
+              value={passwordConfirm}
+              onChangeText={setPasswordConfirm}
+              placeholder="Confirmer le mot de passe"
+              secureTextEntry={secure2}
+              autoCapitalize="none"
+              LeftIcon={KeyIcon}
+              RightIcon={secure2 ? CloseEyeIcon : OpenEyeIcon}
+              onToggleSecure={() => setSecure2((prev) => !prev)}
+              error={error}
+            />
+
+            <ButtonLoop
+              label="Inscription"
+              variant="primary"
+              onPress={handleSignup}
+              style={{ marginTop: 12 }}
+            />
+
+            <SocialAuthSection onSelect={handleSocial} />
+
+            <View style={styles.registerRow}>
+              <Text style={styles.registerText}>Déjà un compte ? </Text>
+              <TouchableOpacity onPress={goToLogin}>
+                <Text style={styles.registerLink}>Se connecter</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </ImageBackground>
   );
@@ -151,14 +155,19 @@ const styles = StyleSheet.create({
   background: {
     flex: 1,
   },
+
   container: {
     flex: 1,
+  },
+
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: "flex-start",
     paddingHorizontal: 24,
   },
 
   header: {
-    marginTop: 32,
+    marginTop: 20,
     marginBottom: 8,
   },
   title: {
