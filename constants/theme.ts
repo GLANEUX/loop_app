@@ -36,6 +36,9 @@ export const Palette = {
   ctaDefault: "#DD6031",
   ctaPressed: "#B54F28",
   ctaDisabled: "#E9ECEF",
+
+  /* Others */
+  opacityBackground: "rgba(0,0,0,0.45)",
 };
 
 /* --------------------------------------------- */

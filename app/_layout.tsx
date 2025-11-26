@@ -8,7 +8,6 @@ import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 
-// On démarre le Splash de façon non bloquante (pas de .then/.catch)
 void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -45,7 +44,7 @@ export default function RootLayout() {
   useEffect(() => {
     if (fontsLoaded) {
       SplashScreen.hideAsync().catch(() => {
-        // tu peux loguer l'erreur si tu veux
+        console.warn("Failed to hide splash screen");
       });
     }
   }, [fontsLoaded]);
@@ -57,8 +56,8 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="(landing)" />
-        {/* <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="(auth)" />
+        {/*    <Stack.Screen name="(tabs)" />
         <Stack.Screen name="(messages)" />
         <Stack.Screen name="(match)" />
         <Stack.Screen name="(pro)" />

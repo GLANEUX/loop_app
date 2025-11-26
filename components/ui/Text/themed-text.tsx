@@ -1,3 +1,4 @@
+// components/ui/Text/themed-text.tsx
 import { Typography } from "@/constants/theme";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import React from "react";

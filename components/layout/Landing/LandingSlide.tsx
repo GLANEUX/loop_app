@@ -7,11 +7,11 @@ import {
   ImageSourcePropType,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { ButtonLoop, TopNavButton } from "@/components/ui";
 import { Palette, Typography } from "@/constants/theme";
 
 interface LandingSlideProps {
@@ -42,13 +42,11 @@ export const LandingSlide: FC<LandingSlideProps> = ({
 
   return (
     <ImageBackground source={image} style={styles.background}>
-      {/* Overlay gradient en bas */}
       <LinearGradient
         colors={["rgba(0,0,0,0.1)", "rgba(0,0,0,0.85)"]}
         style={styles.overlay}
       />
 
-      {/* Contenu */}
       <View
         style={[
           styles.content,
@@ -58,28 +56,23 @@ export const LandingSlide: FC<LandingSlideProps> = ({
           },
         ]}
       >
-        {/* Top bar */}
         <View style={styles.topBar}>
           <View />
-          <TouchableOpacity onPress={handleSkip} activeOpacity={0.7}>
-            <Text style={styles.skipText}>Passer</Text>
-          </TouchableOpacity>
+          <TopNavButton label="Passer" onPress={handleSkip} variant="text" />
         </View>
 
-        {/* Texte + bouton */}
         <View style={styles.bottomContent}>
           <View style={styles.textBlock}>
             <Text style={styles.title}>{title}</Text>
             <Text style={styles.description}>{description}</Text>
           </View>
 
-          <TouchableOpacity
-            style={styles.ctaButton}
-            activeOpacity={0.8}
+          <ButtonLoop
+            label="Suivant"
+            withArrow
             onPress={handleNext}
-          >
-            <Text style={styles.ctaText}>Suivant ›</Text>
-          </TouchableOpacity>
+            style={{ marginTop: 12 }}
+          />
         </View>
       </View>
     </ImageBackground>

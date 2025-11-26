@@ -1,3 +1,5 @@
+// components/ui/Button/ButtonLoop.tsx
+import ArrowRight from "@/assets/icons/icons/direction-right-2-outline-white.svg";
 import { Palette, Typography } from "@/constants/theme";
 import React from "react";
 import {
@@ -6,6 +8,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  View,
   ViewStyle,
 } from "react-native";
 
@@ -18,6 +21,7 @@ interface ButtonLoopProps {
   disabled?: boolean;
   loading?: boolean;
   fullWidth?: boolean;
+  withArrow?: boolean;
   style?: ViewStyle;
 }
 
@@ -28,6 +32,7 @@ export const ButtonLoop: React.FC<ButtonLoopProps> = ({
   disabled = false,
   loading = false,
   fullWidth = true,
+  withArrow = false,
   style,
 }) => {
   const isPrimary = variant === "primary";
@@ -51,14 +56,18 @@ export const ButtonLoop: React.FC<ButtonLoopProps> = ({
           color={isPrimary ? Palette.bgWhite : Palette.primary}
         />
       ) : (
-        <Text
-          style={[
-            styles.text,
-            isPrimary ? styles.textPrimary : styles.textOutline,
-          ]}
-        >
-          {label}
-        </Text>
+        <View style={styles.contentRow}>
+          <Text
+            style={[
+              styles.text,
+              isPrimary ? styles.textPrimary : styles.textOutline,
+            ]}
+          >
+            {label}
+          </Text>
+
+          {withArrow && <ArrowRight width={30} height={30} />}
+        </View>
       )}
     </TouchableOpacity>
   );
@@ -71,8 +80,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
-  /* --- Variants --- */
   primary: {
     backgroundColor: Palette.primary,
   },
@@ -81,8 +88,11 @@ const styles = StyleSheet.create({
     borderColor: Palette.primary,
     backgroundColor: "transparent",
   },
-
-  /* --- Text --- */
+  contentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   text: {
     ...Typography.bodyBold,
     fontSize: 16,
