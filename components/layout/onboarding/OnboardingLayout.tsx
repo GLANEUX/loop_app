@@ -43,21 +43,27 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
           style={[
             styles.safeArea,
             {
-              paddingTop: insets.top + 8,
+              paddingTop: insets.top + 25,
               paddingBottom: insets.bottom + 8,
             },
           ]}
         >
           {/* Header : back + progress bar */}
           <View style={styles.headerRow}>
-            <TouchableOpacity
-              onPress={onBack}
-              disabled={!onBack}
-              style={styles.backButton}
-              activeOpacity={0.8}
-            >
-              {onBack && <BackIcon width={22} height={22} />}
-            </TouchableOpacity>
+            {onBack && (
+              <TouchableOpacity
+                onPress={onBack}
+                disabled={!onBack}
+                style={styles.backButton}
+                activeOpacity={0.8}
+              >
+                <BackIcon
+                  width={22}
+                  height={22}
+                  style={{ transform: [{ scaleX: -1 }] }}
+                />
+              </TouchableOpacity>
+            )}
 
             <View style={styles.progressContainer}>
               <OnboardingProgressBar progress={progress} />

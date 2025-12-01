@@ -1,16 +1,13 @@
-// app/(auth)/(login)/verify-code.tsx
-import { ButtonLoop } from "@/components/ui";
+import { ButtonLoop, VerificationCodeInput } from "@/components/ui";
 import { Palette, Typography } from "@/constants/theme";
 import { useRouter } from "expo-router";
-import React, { useRef, useState } from "react";
+import React, { useState } from "react";
 import {
   ImageBackground,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
   Text,
-  TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -21,11 +18,9 @@ const VerifyCodeScreen: React.FC = () => {
 
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const inputRef = useRef<TextInput | null>(null);
 
   const handleChangeCode = (value: string) => {
-    const cleaned = value.replaceAll(/\D/g, "").slice(0, 4);
-    setCode(cleaned);
+    setCode(value);
     if (error) setError(null);
   };
 
@@ -37,12 +32,6 @@ const VerifyCodeScreen: React.FC = () => {
 
     console.log("Code de vérification:", code);
     router.replace("/(auth)/(login)/new-password");
-  };
-
-  const digits = code.padEnd(4, " ").split("");
-
-  const focusInput = () => {
-    inputRef.current?.focus();
   };
 
   return (
@@ -78,29 +67,12 @@ const VerifyCodeScreen: React.FC = () => {
 
             <Text style={styles.label}>Code de vérification</Text>
 
-            <TouchableOpacity
-              activeOpacity={0.9}
-              style={styles.codeBoxesWrapper}
-              onPress={focusInput}
-            >
-              {digits.map((digit, index) => (
-                <View key={index} style={styles.codeBox}>
-                  <Text style={styles.codeDigit}>
-                    {digit.trim().length ? digit : " "}
-                  </Text>
-                </View>
-              ))}
-
-              <TextInput
-                ref={inputRef}
-                value={code}
-                onChangeText={handleChangeCode}
-                keyboardType="number-pad"
-                maxLength={4}
-                style={styles.hiddenInput}
-                autoFocus
-              />
-            </TouchableOpacity>
+            <VerificationCodeInput
+              length={4}
+              value={code}
+              onChange={handleChangeCode}
+              hasError={!!error}
+            />
 
             <ButtonLoop
               label="Envoyer mon code"
@@ -113,8 +85,6 @@ const VerifyCodeScreen: React.FC = () => {
     </ImageBackground>
   );
 };
-
-const BOX_SIZE = 70;
 
 const styles = StyleSheet.create({
   background: {
@@ -162,31 +132,6 @@ const styles = StyleSheet.create({
   label: {
     ...Typography.bodyBold,
     color: Palette.bgWhite,
-  },
-
-  codeBoxesWrapper: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 12,
-  },
-  codeBox: {
-    width: BOX_SIZE,
-    height: BOX_SIZE,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: Palette.bgWhite,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(0,0,0,0.15)",
-  },
-  codeDigit: {
-    ...Typography.title2Bold,
-    color: Palette.bgWhite,
-  },
-
-  hiddenInput: {
-    position: "absolute",
-    opacity: 0,
   },
 });
 
