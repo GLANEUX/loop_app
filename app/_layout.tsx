@@ -57,11 +57,11 @@ export default function RootLayout() {
         <Stack.Screen name="index" />
         <Stack.Screen name="(landing)" />
         <Stack.Screen name="(auth)" />
-        {/*    <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="(messages)" />
+        <Stack.Screen name="(settings)" />
+        <Stack.Screen name="(tabs)" />
+        {/*<Stack.Screen name="(messages)" />
         <Stack.Screen name="(match)" />
-        <Stack.Screen name="(pro)" />
-        <Stack.Screen name="(settings)" /> */}
+        <Stack.Screen name="(pro)" />*/}
       </Stack>
       <StatusBar style="light" />
     </ThemeProvider>

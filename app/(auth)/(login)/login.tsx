@@ -35,7 +35,7 @@ export const LoginScreen: React.FC = () => {
       return;
     }
     setError(null);
-    router.replace("/(app)/home");
+    router.replace("/(tabs)/explore");
   };
 
   return (
