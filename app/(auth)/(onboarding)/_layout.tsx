@@ -1,4 +1,5 @@
 // app/(onboarding)/_layout.tsx
+import { Palette } from "@/constants/theme";
 import { Stack } from "expo-router";
 import React from "react";
 
@@ -9,6 +10,8 @@ export default function OnboardingLayout() {
         headerShown: false,
         animation: "slide_from_right", // animation fluide entre les étapes
         gestureEnabled: false, // empêche de skip avec le swipe-back sur iOS
+        contentStyle: { backgroundColor: Palette.bgBlack },
+        animationTypeForReplace: "pop",
       }}
     >
       <Stack.Screen name="oops" />

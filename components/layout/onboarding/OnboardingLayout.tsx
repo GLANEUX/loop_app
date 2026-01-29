@@ -117,6 +117,7 @@ const styles = StyleSheet.create({
   },
   background: {
     flex: 1,
+    backgroundColor: "black",
   },
   safeArea: {
     flex: 1,

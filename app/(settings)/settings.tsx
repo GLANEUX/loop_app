@@ -1,7 +1,7 @@
 // app/(tabs)/profile-settings.tsx (par ex.)
 
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Image,
@@ -13,10 +13,13 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { Env } from "@/constants/env";
 import { Palette, Typography } from "@/constants/theme";
 import { formatApiError } from "@/lib/api";
 import { logout } from "@/lib/auth";
 import { clearSession, getAccessToken } from "@/lib/session";
+import { getMyProfileCached, UserMe } from "@/lib/user";
+import * as FileSystem from "expo-file-system/legacy";
 
 import BackIcon from "@/assets/icons/icons/arrow-right-outline-white.svg";
 import RightChevronIcon from "@/assets/icons/icons/direction-right-2-outline-white.svg";
@@ -52,8 +55,11 @@ const SettingsRow: React.FC<SettingsRowProps> = ({ label, Icon, onPress }) => {
 };
 
 export const ProfileSettingsScreen: React.FC = () => {
-  const username = "Léa Martin";
-  const handle = "@leamartin89";
+  const [user, setUser] = useState<UserMe | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [avatarLocalUri, setAvatarLocalUri] = useState<string | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [profileError, setProfileError] = useState<string | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const handleOnClic = () => {
     router.replace("/(tabs)/profile");
@@ -75,6 +81,113 @@ export const ProfileSettingsScreen: React.FC = () => {
       router.replace("/(auth)/authPage");
     }
   };
+
+  useEffect(() => {
+    let active = true;
+    const fetchProfile = async () => {
+      setLoadingProfile(true);
+      setProfileError(null);
+      try {
+        const token = await getAccessToken();
+        if (!token) {
+          if (active) setLoadingProfile(false);
+          return;
+        }
+        if (active) setToken(token);
+        const data = await getMyProfileCached(token);
+        if (active) setUser(data);
+      } catch (err) {
+        if (active) setProfileError(formatApiError(err));
+      } finally {
+        if (active) setLoadingProfile(false);
+      }
+    };
+
+    fetchProfile();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const profile = user?.profile;
+  const displayName = useMemo(() => {
+    const parts = [profile?.firstName, profile?.lastName].filter(Boolean);
+    if (parts.length > 0) return parts.join(" ");
+    return user?.pseudo || "Utilisateur";
+  }, [profile?.firstName, profile?.lastName, user?.pseudo]);
+
+  const handle = user?.pseudo ? `@${user.pseudo}` : user?.email || "";
+
+  const avatarUriBase =
+    profile?.hasAvatar === false
+      ? null
+      : profile?.avatarUrl
+        ? profile.avatarUrl
+        : profile?.hasAvatar === true
+          ? `${Env.API_URL}/user/me/avatar`
+          : null;
+  const avatarVersion = profile?.updatedAt || "";
+  const avatarUri =
+    avatarUriBase && avatarVersion
+      ? `${avatarUriBase}?v=${encodeURIComponent(avatarVersion)}`
+      : avatarUriBase;
+
+  useEffect(() => {
+    let active = true;
+    const downloadAvatar = async () => {
+      if (!token || !profile?.hasAvatar || !avatarUri) {
+        if (active) setAvatarLocalUri(null);
+        return;
+      }
+      const cacheDir = FileSystem.cacheDirectory;
+      if (!cacheDir) return;
+      const safeVersion = avatarVersion
+        ? encodeURIComponent(avatarVersion)
+        : "latest";
+      const fileUri = `${cacheDir}avatar-${user?.id ?? "me"}-${safeVersion}.img`;
+
+      try {
+        const info = await FileSystem.getInfoAsync(fileUri);
+        if (info.exists) {
+          if (active) setAvatarLocalUri(fileUri);
+          return;
+        }
+        const result = await FileSystem.downloadAsync(avatarUri, fileUri, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (active && result?.uri) {
+          setAvatarLocalUri(result.uri);
+        }
+      } catch {
+        if (active) setAvatarLocalUri(null);
+      }
+    };
+    downloadAvatar();
+    return () => {
+      active = false;
+    };
+  }, [token, profile?.hasAvatar, avatarUri, avatarVersion, user?.id]);
+
+  const avatarSource = avatarLocalUri
+    ? { uri: avatarLocalUri }
+    : avatarUri && token
+      ? { uri: avatarUri, headers: { Authorization: `Bearer ${token}` } }
+      : avatarUri
+        ? { uri: avatarUri }
+        : require("@/assets/images/landing/landing-9.jpg");
+
+  const formatDate = (value?: string | null) => {
+    if (!value) return "Non renseignée";
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return value;
+    return parsed.toLocaleDateString("fr-FR", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
@@ -93,13 +206,16 @@ export const ProfileSettingsScreen: React.FC = () => {
 
         {/* Header user */}
         <View style={styles.userHeader}>
-          <Image
-            source={require("@/assets/images/landing/landing-9.jpg")}
-            style={styles.avatar}
-          />
+          <Image source={avatarSource} style={styles.avatar} />
           <View style={styles.userTextBlock}>
-            <Text style={styles.name}>{username}</Text>
-            <Text style={styles.handle}>{handle}</Text>
+            <Text style={styles.name}>{displayName}</Text>
+            {!!handle && <Text style={styles.handle}>{handle}</Text>}
+            {loadingProfile && (
+              <Text style={styles.statusText}>Chargement...</Text>
+            )}
+            {profileError && (
+              <Text style={styles.errorText}>{profileError}</Text>
+            )}
           </View>
         </View>
 
@@ -174,6 +290,24 @@ const styles = StyleSheet.create({
     ...Typography.bodyMedium,
     color: Palette.grey600,
   },
+  statusText: {
+    marginTop: 6,
+    ...Typography.bodyMedium,
+    color: Palette.grey300,
+  },
+  errorText: {
+    marginTop: 6,
+    ...Typography.bodyMedium,
+    color: Palette.primary,
+  },
+
+  profileInfoCard: {
+    marginTop: 20,
+    padding: 16,
+    borderRadius: 18,
+    backgroundColor: Palette.opacityBackground,
+    gap: 10,
+  },
 
   /* Rows */
   rowsGroup: {
@@ -213,3 +347,17 @@ const styles = StyleSheet.create({
     color: Palette.bgWhite,
   },
 });
+
+const InfoRow: React.FC<{ label: string; value: string }> = ({
+  label,
+  value,
+}) => (
+  <View>
+    <Text style={{ ...Typography.bodyBold, color: Palette.grey300 }}>
+      {label}
+    </Text>
+    <Text style={{ ...Typography.bodyMedium, color: Palette.bgWhite }}>
+      {value}
+    </Text>
+  </View>
+);
