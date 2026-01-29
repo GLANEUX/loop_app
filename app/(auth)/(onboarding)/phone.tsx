@@ -2,6 +2,9 @@
 import { OnboardingLayout } from "@/components/layout";
 import { ButtonLoop } from "@/components/ui";
 import { Palette, Typography } from "@/constants/theme";
+import { formatApiError } from "@/lib/api";
+import { getAccessToken } from "@/lib/session";
+import { updateMyProfile } from "@/lib/user";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -34,6 +37,7 @@ export const PhoneStepScreen: React.FC = () => {
   const [country, setCountry] = useState<Country>(COUNTRIES[0]);
   const [countryModalVisible, setCountryModalVisible] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const openCountryModal = () => setCountryModalVisible(true);
   const closeCountryModal = () => setCountryModalVisible(false);
@@ -51,7 +55,7 @@ export const PhoneStepScreen: React.FC = () => {
     if (error) setError(null);
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     const digits = phone.replaceAll(/\D/g, "");
 
     if (digits.length < 9 || digits.length > 10) {
@@ -59,16 +63,24 @@ export const PhoneStepScreen: React.FC = () => {
       return;
     }
 
+    const internationalNumber = `${country.prefix}${digits}`;
+
+    setLoading(true);
     setError(null);
+    try {
+      const token = await getAccessToken();
+      if (!token) {
+        setError("Tu dois être connecté pour continuer.");
+        return;
+      }
 
-    console.log("Phone submit:", {
-      raw: phone,
-      digits,
-      international: `${country.prefix}${digits}`,
-      country: country.code,
-    });
-
-    router.push("/(onboarding)/sms-code");
+      await updateMyProfile({ phoneNumber: internationalNumber }, token);
+      router.push("/(onboarding)/sms-code");
+    } catch (err) {
+      setError(formatApiError(err));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const hasError = Boolean(error);
@@ -76,7 +88,7 @@ export const PhoneStepScreen: React.FC = () => {
   return (
     <OnboardingLayout
       imageSource={require("@/assets/images/auth/background-5.png")}
-      progress={0.3}
+      progress={0.2}
       onBack={() => router.back()}
     >
       <Text style={styles.title}>Complète ton profil</Text>
@@ -121,7 +133,7 @@ export const PhoneStepScreen: React.FC = () => {
       </View>
 
       <View style={styles.buttonWrapper}>
-        <ButtonLoop label="Continuer" onPress={handleContinue} />
+        <ButtonLoop label="Continuer" onPress={handleContinue} loading={loading} />
       </View>
 
       {/* ---- Modal liste des pays ---- */}

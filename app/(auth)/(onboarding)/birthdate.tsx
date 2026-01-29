@@ -2,6 +2,9 @@
 import { OnboardingLayout } from "@/components/layout";
 import { ButtonLoop } from "@/components/ui";
 import { Palette, Typography } from "@/constants/theme";
+import { formatApiError } from "@/lib/api";
+import { getAccessToken } from "@/lib/session";
+import { updateMyProfile } from "@/lib/user";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { StyleSheet, Text, TextInput, View } from "react-native";
@@ -10,6 +13,7 @@ export const BirthdateScreen: React.FC = () => {
   const router = useRouter();
   const [birthdate, setBirthdate] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (value: string) => {
     // on garde seulement les chiffres
@@ -26,7 +30,7 @@ export const BirthdateScreen: React.FC = () => {
     if (error) setError(null); // on efface l'erreur dès que l'utilisateur retape
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     const digits = birthdate.replaceAll(/[^\d]/g, ""); // JJMMYYYY
 
     if (digits.length !== 8) {
@@ -67,16 +71,32 @@ export const BirthdateScreen: React.FC = () => {
       return;
     }
 
-    setError(null);
-    console.log("Date de naissance :", birthdate, "- âge estimé :", age);
+    const isoDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(
+      day,
+    ).padStart(2, "0")}`;
 
-    router.push("/(onboarding)/gender");
+    setLoading(true);
+    setError(null);
+    try {
+      const token = await getAccessToken();
+      if (!token) {
+        setError("Tu dois être connecté pour continuer.");
+        return;
+      }
+
+      await updateMyProfile({ birthDate: isoDate }, token);
+      router.push("/(onboarding)/gender");
+    } catch (err) {
+      setError(formatApiError(err));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <OnboardingLayout
       imageSource={require("@/assets/images/auth/background-4.png")}
-      progress={0.5}
+      progress={0.4}
       onBack={() => router.back()}
     >
       <Text style={styles.title}>Ta date de naissance</Text>
@@ -103,7 +123,7 @@ export const BirthdateScreen: React.FC = () => {
       </Text>
 
       <View style={styles.buttonWrapper}>
-        <ButtonLoop label="Continuer" onPress={handleContinue} />
+        <ButtonLoop label="Continuer" onPress={handleContinue} loading={loading} />
       </View>
     </OnboardingLayout>
   );

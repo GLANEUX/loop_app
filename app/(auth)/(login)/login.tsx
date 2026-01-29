@@ -4,9 +4,12 @@ import KeyIcon from "@/assets/icons/icons/group-1539-1.svg";
 import CloseEyeIcon from "@/assets/icons/icons/hide-white.svg";
 import MailIcon from "@/assets/icons/icons/mail-outline-white.svg";
 
-import { ButtonLoop, SocialAuthSection } from "@/components/ui";
+import { ButtonLoop } from "@/components/ui";
 import { AuthTextField } from "@/components/ui/input/AuthTextField";
 import { Palette, Typography } from "@/constants/theme";
+import { ApiRequestError } from "@/lib/api";
+import { login } from "@/lib/auth";
+import { saveSession } from "@/lib/session";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -28,14 +31,34 @@ export const LoginScreen: React.FC = () => {
   const [password, setPassword] = useState("");
   const [secure, setSecure] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email || !password) {
       setError("L’adresse e-mail ou le mot de passe est incorrect.");
       return;
     }
+    setLoading(true);
     setError(null);
-    router.replace("/(tabs)/explore");
+    try {
+      const session = await login({ email, password });
+      await saveSession(session);
+      router.replace("/(tabs)/explore");
+    } catch (err) {
+      if (err instanceof ApiRequestError) {
+        if (err.status === 401 || err.status === 400) {
+          setError("E-mail ou mot de passe invalide.");
+          return;
+        }
+        if (err.status === 429) {
+          setError("Trop de tentatives. Reessayez plus tard.");
+          return;
+        }
+      }
+      setError("Une erreur est survenue.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -62,6 +85,8 @@ export const LoginScreen: React.FC = () => {
 
           {/* CARD OPAQUE */}
           <View style={styles.card}>
+            {error && <Text style={styles.errorText}>{error}</Text>}
+
             <AuthTextField
               label="E-mail"
               value={email}
@@ -71,6 +96,7 @@ export const LoginScreen: React.FC = () => {
               autoCapitalize="none"
               LeftIcon={MailIcon}
               error={error}
+              showErrorText={false}
             />
 
             <AuthTextField
@@ -84,6 +110,7 @@ export const LoginScreen: React.FC = () => {
               RightIcon={secure ? CloseEyeIcon : OpenEyeIcon}
               onToggleSecure={() => setSecure((prev) => !prev)}
               error={error}
+              showErrorText={false}
             />
 
             <TouchableOpacity
@@ -96,10 +123,11 @@ export const LoginScreen: React.FC = () => {
               label="Connexion"
               variant="primary"
               onPress={handleLogin}
+              loading={loading}
               style={{ marginTop: 16 }}
             />
 
-            <SocialAuthSection onSelect={() => {}} />
+            {/* <SocialAuthSection onSelect={() => {}} /> */}
 
             <View style={styles.registerRow}>
               <Text style={styles.registerText}>Pas de compte ? </Text>
@@ -149,6 +177,12 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     paddingHorizontal: 20,
     gap: 14,
+  },
+
+  errorText: {
+    color: Palette.primary,
+    ...Typography.bodyBold,
+    marginBottom: 4,
   },
 
   forgotText: {

@@ -1,6 +1,6 @@
 // app/(auth)/authPage.tsx
 import InfoIcon from "@/assets/icons/icons/information-circle-white.svg";
-import { ButtonLoop, IconButton, SocialAuthSection } from "@/components/ui";
+import { ButtonLoop, IconButton } from "@/components/ui";
 import { useRouter } from "expo-router";
 import React from "react";
 import { ImageBackground, StyleSheet, View } from "react-native";
@@ -57,7 +57,7 @@ export const AuthLandingScreen: React.FC = () => {
             onPress={handleRegister}
           />
 
-          <SocialAuthSection onSelect={handleSocial} />
+          {/* <SocialAuthSection onSelect={handleSocial} /> */}
         </View>
       </View>
     </ImageBackground>

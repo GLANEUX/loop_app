@@ -33,7 +33,7 @@ export const SmsCodeStepScreen: React.FC = () => {
   return (
     <OnboardingLayout
       imageSource={require("@/assets/images/auth/background-2.png")}
-      progress={0.4}
+      progress={0.3}
       onBack={() => router.back()}
     >
       <Text style={styles.title}>Entre le code de vérification</Text>

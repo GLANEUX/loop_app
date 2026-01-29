@@ -4,9 +4,12 @@ import KeyIcon from "@/assets/icons/icons/group-1539-1.svg";
 import CloseEyeIcon from "@/assets/icons/icons/hide-white.svg";
 import MailIcon from "@/assets/icons/icons/mail-outline-white.svg";
 
-import { ButtonLoop, SocialAuthSection } from "@/components/ui";
+import { ButtonLoop } from "@/components/ui";
 import { AuthTextField } from "@/components/ui/input/AuthTextField";
 import { Palette, Typography } from "@/constants/theme";
+import { formatApiError } from "@/lib/api";
+import { register } from "@/lib/auth";
+import { saveSession } from "@/lib/session";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -24,17 +27,20 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 export const SignupScreen: React.FC = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const keyboardOffset = Platform.OS === "ios" ? insets.top + 12 : 0;
+  const scrollBottomPadding = insets.bottom + 120;
 
-  // const [pseudo, setPseudo] = useState("");
+  const [pseudo, setPseudo] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [secure1, setSecure1] = useState(true);
   const [secure2, setSecure2] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleSignup = () => {
-    if (/*!pseudo ||*/ !email || !password || !passwordConfirm) {
+  const handleSignup = async () => {
+    if (!pseudo || !email || !password || !passwordConfirm) {
       setError("Veuillez remplir tous les champs.");
       return;
     }
@@ -43,16 +49,28 @@ export const SignupScreen: React.FC = () => {
       return;
     }
 
+    setLoading(true);
     setError(null);
-    console.log("Signup:", { /*pseudo,*/ email, password });
-    router.replace("/(auth)/(onboarding)/choose-pseudo");
+    try {
+      const session = await register({
+        pseudo,
+        email,
+        password,
+      });
+      await saveSession(session);
+      router.replace("/(auth)/(onboarding)/name");
+    } catch (err) {
+      setError(formatApiError(err));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const goToLogin = () => router.push("/(auth)/(login)/login");
 
-  const handleSocial = (provider: "facebook" | "apple" | "google") => {
-    console.log("Social signup:", provider);
-  };
+  // const handleSocial = (provider: "facebook" | "apple" | "google") => {
+  //   console.log("Social signup:", provider);
+  // };
 
   return (
     <ImageBackground
@@ -61,7 +79,8 @@ export const SignupScreen: React.FC = () => {
       resizeMode="cover"
     >
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={keyboardOffset}
         style={styles.container}
       >
         <ScrollView
@@ -69,7 +88,7 @@ export const SignupScreen: React.FC = () => {
             styles.scrollContent,
             {
               paddingTop: insets.top,
-              paddingBottom: insets.bottom + 40,
+              paddingBottom: scrollBottomPadding,
             },
           ]}
           keyboardShouldPersistTaps="handled"
@@ -83,14 +102,15 @@ export const SignupScreen: React.FC = () => {
           <View style={styles.card}>
             {error && <Text style={styles.errorText}>{error}</Text>}
 
-            {/* <AuthTextField
+            <AuthTextField
               label="Pseudo"
               value={pseudo}
               onChangeText={setPseudo}
               placeholder="Choisis un pseudo"
               autoCapitalize="none"
               error={error}
-            /> */}
+              showErrorText={false}
+            />
 
             <AuthTextField
               label="E-mail"
@@ -101,6 +121,7 @@ export const SignupScreen: React.FC = () => {
               autoCapitalize="none"
               LeftIcon={MailIcon}
               error={error}
+              showErrorText={false}
             />
 
             <AuthTextField
@@ -114,6 +135,7 @@ export const SignupScreen: React.FC = () => {
               RightIcon={secure1 ? CloseEyeIcon : OpenEyeIcon}
               onToggleSecure={() => setSecure1((prev) => !prev)}
               error={error}
+              showErrorText={false}
             />
 
             <AuthTextField
@@ -127,16 +149,18 @@ export const SignupScreen: React.FC = () => {
               RightIcon={secure2 ? CloseEyeIcon : OpenEyeIcon}
               onToggleSecure={() => setSecure2((prev) => !prev)}
               error={error}
+              showErrorText={false}
             />
 
             <ButtonLoop
               label="Inscription"
               variant="primary"
               onPress={handleSignup}
+              loading={loading}
               style={{ marginTop: 12 }}
             />
 
-            <SocialAuthSection onSelect={handleSocial} />
+            {/* <SocialAuthSection onSelect={handleSocial} /> */}
 
             <View style={styles.registerRow}>
               <Text style={styles.registerText}>Déjà un compte ? </Text>

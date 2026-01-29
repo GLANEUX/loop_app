@@ -28,6 +28,8 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
   children,
 }) => {
   const insets = useSafeAreaInsets();
+  const keyboardOffset = Platform.OS === "ios" ? insets.top + 12 : 0;
+  const scrollBottomPadding = insets.bottom + 120;
 
   return (
     <ImageBackground
@@ -37,7 +39,8 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
     >
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={keyboardOffset}
       >
         <View
           style={[
@@ -73,7 +76,10 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
           {/* Contenu qui scrolle au besoin */}
           <ScrollView
             style={styles.flex}
-            contentContainerStyle={styles.content}
+            contentContainerStyle={[
+              styles.content,
+              { paddingBottom: scrollBottomPadding },
+            ]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >

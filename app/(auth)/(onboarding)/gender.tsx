@@ -2,6 +2,9 @@
 import { OnboardingLayout, TagChip } from "@/components/layout";
 import { ButtonLoop } from "@/components/ui";
 import { Palette, Typography } from "@/constants/theme";
+import { formatApiError } from "@/lib/api";
+import { getAccessToken } from "@/lib/session";
+import { updateMyProfile } from "@/lib/user";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -12,26 +15,41 @@ export const GenderScreen: React.FC = () => {
   const router = useRouter();
   const [selected, setSelected] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const handleSelect = (gender: string) => {
     setSelected(gender);
     if (error) setError(null); // effacer l’erreur dès qu’on choisit
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!selected) {
       setError("Sélectionne une option pour continuer.");
       return;
     }
 
-    console.log("Genre sélectionné :", selected);
-    router.push("/(onboarding)/styles");
+    setLoading(true);
+    setError(null);
+    try {
+      const token = await getAccessToken();
+      if (!token) {
+        setError("Tu dois être connecté pour continuer.");
+        return;
+      }
+
+      await updateMyProfile({ gender: selected }, token);
+      router.push("/(onboarding)/styles");
+    } catch (err) {
+      setError(formatApiError(err));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <OnboardingLayout
       imageSource={require("@/assets/images/auth/background-2.png")}
-      progress={0.6}
+      progress={0.5}
       onBack={() => router.back()}
     >
       <Text style={styles.title}>Tu es un.e...</Text>
@@ -50,7 +68,7 @@ export const GenderScreen: React.FC = () => {
       </View>
 
       <View style={styles.buttonWrapper}>
-        <ButtonLoop label="Continuer" onPress={handleContinue} />
+        <ButtonLoop label="Continuer" onPress={handleContinue} loading={loading} />
       </View>
     </OnboardingLayout>
   );

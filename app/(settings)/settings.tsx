@@ -1,8 +1,9 @@
 // app/(tabs)/profile-settings.tsx (par ex.)
 
 import { router } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import {
+  Alert,
   Image,
   ScrollView,
   StyleSheet,
@@ -13,6 +14,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Palette, Typography } from "@/constants/theme";
+import { formatApiError } from "@/lib/api";
+import { logout } from "@/lib/auth";
+import { clearSession, getAccessToken } from "@/lib/session";
 
 import BackIcon from "@/assets/icons/icons/arrow-right-outline-white.svg";
 import RightChevronIcon from "@/assets/icons/icons/direction-right-2-outline-white.svg";
@@ -50,8 +54,26 @@ const SettingsRow: React.FC<SettingsRowProps> = ({ label, Icon, onPress }) => {
 export const ProfileSettingsScreen: React.FC = () => {
   const username = "Léa Martin";
   const handle = "@leamartin89";
+  const [loggingOut, setLoggingOut] = useState(false);
   const handleOnClic = () => {
     router.replace("/(tabs)/profile");
+  };
+
+  const handleLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      const token = await getAccessToken();
+      if (token) {
+        await logout(token);
+      }
+    } catch (err) {
+      Alert.alert("Erreur", formatApiError(err));
+    } finally {
+      await clearSession();
+      setLoggingOut(false);
+      router.replace("/(auth)/authPage");
+    }
   };
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -96,7 +118,8 @@ export const ProfileSettingsScreen: React.FC = () => {
 
         <ButtonLoop
           label="Se déconnecter"
-          onPress={() => {}}
+          onPress={handleLogout}
+          loading={loggingOut}
           style={styles.logoutButton}
         />
       </ScrollView>

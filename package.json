@@ -16,6 +16,7 @@
   "dependencies": {
     "@expo-google-fonts/poppins": "^0.4.1",
     "@expo/vector-icons": "^15.0.3",
+    "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-navigation/bottom-tabs": "^7.4.0",
     "@react-navigation/elements": "^2.6.3",
     "@react-navigation/native": "^7.1.8",
@@ -49,13 +50,13 @@
   "devDependencies": {
     "@babel/core": "^7.28.5",
     "@gorhom/bottom-sheet": "^5.2.6",
-    "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-community/datetimepicker": "^8.5.0",
     "@react-native-community/slider": "^5.1.1",
     "@storybook/addon-docs": "^10.0.7",
     "@storybook/react-native-web-vite": "^10.0.7",
     "@types/react": "~19.1.0",
     "babel-loader": "^8.4.1",
+    "baseline-browser-mapping": "^2.9.19",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
     "eslint-plugin-storybook": "^10.0.7",

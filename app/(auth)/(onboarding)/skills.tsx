@@ -3,44 +3,50 @@
 import { OnboardingLayout, TagChip } from "@/components/layout";
 import { ButtonLoop } from "@/components/ui";
 import { Palette, Typography } from "@/constants/theme";
+import { formatApiError } from "@/lib/api";
+import { getInstruments, Instrument } from "@/lib/catalog";
+import { getAccessToken } from "@/lib/session";
+import { updateMyProfile } from "@/lib/user";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-
-const SKILLS = [
-  "Chant",
-  "Guitare acoustique",
-  "Guitare électrique",
-  "Basse",
-  "Piano",
-  "Synthétiseur",
-  "Batterie",
-  "Percussions",
-  "Violon",
-  "Saxophone",
-  "Flûte",
-  "Harmonica",
-  "Accordéon",
-  "Platines",
-  "Beatbox",
-  "MAO",
-  "Mixage",
-  "Composition",
-  "Enregistrement",
-  "Coaching",
-  "Trompette",
-  "Production",
-];
 
 export const SkillsScreen: React.FC = () => {
   const router = useRouter();
+  const [instruments, setInstruments] = useState<Instrument[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
+  const [levelsById, setLevelsById] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadingInstruments, setLoadingInstruments] = useState(true);
+  const [instrumentsError, setInstrumentsError] = useState<string | null>(null);
 
-  const toggle = (label: string) => {
+  useEffect(() => {
+    let active = true;
+
+    const loadInstruments = async () => {
+      setLoadingInstruments(true);
+      setInstrumentsError(null);
+      try {
+        const data = await getInstruments();
+        if (active) setInstruments(data);
+      } catch (err) {
+        if (active) setInstrumentsError(formatApiError(err));
+      } finally {
+        if (active) setLoadingInstruments(false);
+      }
+    };
+
+    loadInstruments();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const toggle = (id: string) => {
     setSelected((prev) => {
-      const exists = prev.includes(label);
-      const next = exists ? prev.filter((s) => s !== label) : [...prev, label];
+      const exists = prev.includes(id);
+      const next = exists ? prev.filter((s) => s !== id) : [...prev, id];
 
       if (error && next.length > 0) {
         setError(null); // on efface l'erreur dès qu'au moins une compétence est sélectionnée
@@ -48,42 +54,117 @@ export const SkillsScreen: React.FC = () => {
 
       return next;
     });
+
+    setLevelsById((prev) => {
+      if (prev[id] && selected.includes(id)) {
+        const { [id]: _removed, ...rest } = prev;
+        return rest;
+      }
+      if (!prev[id]) {
+        return { ...prev, [id]: "Intermediate" };
+      }
+      return prev;
+    });
   };
 
-  const handleContinue = () => {
+  const setLevel = (id: string, level: string) => {
+    setLevelsById((prev) => ({ ...prev, [id]: level }));
+  };
+
+  const handleContinue = async () => {
     if (!selected.length) {
       setError("Sélectionne au moins une compétence pour continuer.");
       return;
     }
 
-    console.log("Compétences sélectionnées :", selected);
-    router.push("/(onboarding)/upload-tracks");
+    const payloadInstruments = selected
+      .map((id) => {
+        const instrument = instruments.find((item) => item.id === id);
+        if (!instrument) return null;
+        return {
+          instrument: instrument.name,
+          level: levelsById[id] || "Intermediate",
+        };
+      })
+      .filter(Boolean) as Array<{ instrument: string; level: string }>;
+
+    setLoading(true);
+    setError(null);
+    try {
+      const token = await getAccessToken();
+      if (!token) {
+        setError("Tu dois être connecté pour continuer.");
+        return;
+      }
+
+      await updateMyProfile({ instruments: payloadInstruments }, token);
+      router.push("/(onboarding)/avatar");
+    } catch (err) {
+      setError(formatApiError(err));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <OnboardingLayout
       imageSource={require("@/assets/images/auth/background-7.png")}
-      progress={0.8}
+      progress={0.7}
       onBack={() => router.back()}
     >
       <Text style={styles.title}>Tes compétences</Text>
       <Text style={styles.subtitle}>Guitare, batterie, synthé, voix…</Text>
 
       <View style={styles.tagsContainer}>
-        {SKILLS.map((s) => (
-          <TagChip
-            key={s}
-            label={s}
-            selected={selected.includes(s)}
-            onPress={() => toggle(s)}
-          />
-        ))}
+        {loadingInstruments && <Text style={styles.helperText}>Chargement…</Text>}
+
+        {!loadingInstruments &&
+          instruments.map((instrument) => (
+            <TagChip
+              key={instrument.id}
+              label={instrument.name}
+              selected={selected.includes(instrument.id)}
+              onPress={() => toggle(instrument.id)}
+            />
+          ))}
 
         {error && <Text style={styles.errorText}>{error}</Text>}
+        {instrumentsError && <Text style={styles.errorText}>{instrumentsError}</Text>}
       </View>
 
+      {!!selected.length && (
+        <View style={styles.levelsContainer}>
+          <Text style={styles.levelsTitle}>Niveau par instrument</Text>
+          {selected.map((id) => {
+            const instrument = instruments.find((item) => item.id === id);
+            if (!instrument) return null;
+            const current = levelsById[id] || "Intermediate";
+            return (
+              <View key={id} style={styles.levelRow}>
+                <Text style={styles.levelLabel}>{instrument.name}</Text>
+                <View style={styles.levelOptions}>
+                  {[
+                    "Beginner",
+                    "Intermediate",
+                    "Advanced",
+                    "Professional",
+                  ].map((level) => (
+                    <TagChip
+                      key={level}
+                      label={level}
+                      selected={current === level}
+                      onPress={() => setLevel(id, level)}
+                    />
+                  ))}
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      )}
+
       <View style={styles.buttonWrapper}>
-        <ButtonLoop label="Continuer" onPress={handleContinue} />
+        <ButtonLoop label="Continuer" onPress={handleContinue} loading={loading} />
       </View>
     </OnboardingLayout>
   );
@@ -112,6 +193,34 @@ const styles = StyleSheet.create({
     ...Typography.smallLight,
     color: Palette.primary,
     textAlign: "center",
+  },
+  helperText: {
+    width: "100%",
+    ...Typography.smallLight,
+    color: Palette.grey100,
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  levelsContainer: {
+    marginBottom: 20,
+  },
+  levelsTitle: {
+    ...Typography.bodyBold,
+    color: Palette.bgWhite,
+    marginBottom: 10,
+  },
+  levelRow: {
+    marginBottom: 12,
+  },
+  levelLabel: {
+    ...Typography.bodyRegular,
+    color: Palette.bgWhite,
+    marginBottom: 8,
+  },
+  levelOptions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
   },
   buttonWrapper: {
     marginTop: 8,

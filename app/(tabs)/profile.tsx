@@ -1,9 +1,13 @@
 import RightChevronIcon from "@/assets/icons/icons/direction-right-2-outline-white.svg";
 import EditAvatarIcon from "@/assets/icons/icons/edit-outline-white.svg";
 import SettingsIcon from "@/assets/icons/icons/settings-outline-white.svg";
+import { Env } from "@/constants/env";
 import { Palette, Typography } from "@/constants/theme";
+import { formatApiError } from "@/lib/api";
+import { getAccessToken } from "@/lib/session";
+import { getMyProfile, UserMe } from "@/lib/user";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Image,
   ScrollView,
@@ -14,18 +18,100 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const instruments = ["Guitare", "Piano", "Voix"];
-const stylesMusicaux = ["Jazz", "Soul"];
+const fallbackAvatar = require("@/assets/images/landing/landing-9.jpg");
+
+const formatDate = (value?: string | null) => {
+  if (!value) return "Non renseignée";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString("fr-FR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+};
 
 export const ProfileScreen: React.FC = () => {
-  const username = "Léa Martin";
-  const handle = "@leamartin89";
-  const location = "Paris";
+  const [user, setUser] = useState<UserMe | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const [isAboutExpanded, setIsAboutExpanded] = useState(false);
   const handleOnClic = () => {
     router.replace("/(settings)/settings");
   };
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchProfile = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const token = await getAccessToken();
+        if (!token) {
+          if (isMounted) {
+            setError("Tu dois être connecté pour voir ton profil.");
+            setLoading(false);
+          }
+          return;
+        }
+        if (isMounted) {
+          setToken(token);
+        }
+        const data = await getMyProfile(token);
+        if (isMounted) {
+          setUser(data);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(formatApiError(err));
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchProfile();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const profile = user?.profile;
+  const displayName = useMemo(() => {
+    const parts = [profile?.firstName, profile?.lastName].filter(Boolean);
+    if (parts.length > 0) return parts.join(" ");
+    return user?.pseudo || "Utilisateur";
+  }, [profile?.firstName, profile?.lastName, user?.pseudo]);
+
+  const handle = user?.pseudo ? `@${user.pseudo}` : user?.email || "";
+  const avatarUriBase = profile?.avatarUrl
+    ? profile.avatarUrl
+    : profile?.hasAvatar
+      ? `${Env.API_URL}/user/me/avatar`
+      : null;
+  const avatarVersion = profile?.updatedAt || "";
+  const avatarUri =
+    avatarUriBase && avatarVersion
+      ? `${avatarUriBase}?v=${encodeURIComponent(avatarVersion)}`
+      : avatarUriBase;
+  const avatarSource =
+    avatarUri && token
+      ? { uri: avatarUri, headers: { Authorization: `Bearer ${token}` } }
+      : avatarUri
+        ? { uri: avatarUri }
+        : fallbackAvatar;
+
+  const instruments = (profile?.instruments ?? [])
+    .map((item) =>
+      item.level ? `${item.instrument} · ${item.level}` : item.instrument,
+    )
+    .filter(Boolean);
+
+  const stylesMusicaux = (profile?.genres ?? []).filter(Boolean);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -44,10 +130,7 @@ export const ProfileScreen: React.FC = () => {
           </TouchableOpacity>
 
           <View style={styles.avatarWrapper}>
-            <Image
-              source={require("@/assets/images/landing/landing-9.jpg")}
-              style={styles.avatar}
-            />
+            <Image source={avatarSource} style={styles.avatar} />
             <TouchableOpacity style={styles.editAvatarButton}>
               <EditAvatarIcon width={25} height={25} />
             </TouchableOpacity>
@@ -56,14 +139,33 @@ export const ProfileScreen: React.FC = () => {
 
         {/* Nom + handle */}
         <View style={styles.identityBlock}>
-          <Text style={styles.name}>{username}</Text>
-          <Text style={styles.handle}>{handle}</Text>
+          <Text style={styles.name}>{displayName}</Text>
+          {!!handle && <Text style={styles.handle}>{handle}</Text>}
+          {loading && <Text style={styles.statusText}>Chargement...</Text>}
+          {error && <Text style={styles.errorText}>{error}</Text>}
         </View>
 
-        {/* Localisation */}
+        {/* Informations */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Localisation</Text>
-          <Text style={styles.sectionValue}>{location}</Text>
+          <Text style={styles.sectionTitle}>Informations</Text>
+          <InfoRow label="Email" value={user?.email || "Non renseigné"} />
+          <InfoRow label="Rôle" value={user?.role || "Non renseigné"} />
+          <InfoRow
+            label="Téléphone"
+            value={profile?.phoneNumber || "Non renseigné"}
+          />
+          <InfoRow label="Date de naissance" value={formatDate(profile?.birthDate)} />
+          <InfoRow label="Genre" value={profile?.gender || "Non renseigné"} />
+          <InfoRow
+            label="Visibilité"
+            value={
+              profile?.isPublic === undefined || profile?.isPublic === null
+                ? "Non renseignée"
+                : profile.isPublic
+                  ? "Public"
+                  : "Privé"
+            }
+          />
         </View>
 
         {/* À propos */}
@@ -73,27 +175,30 @@ export const ProfileScreen: React.FC = () => {
             style={styles.about}
             numberOfLines={isAboutExpanded ? undefined : 4}
           >
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
-            eiusmod tempor incididunt ut labore et dolore magna...Lorem ipsum
-            dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor
-            incididunt ut labore et dolore magna...Lorem ipsum dolor sit amet,
-            consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
-            labore et dolore magna...
+            {profile?.bio?.trim().length
+              ? profile.bio
+              : "Aucune bio pour le moment."}
           </Text>
-          <TouchableOpacity onPress={() => setIsAboutExpanded((prev) => !prev)}>
-            <Text style={styles.readMore}>
-              {isAboutExpanded ? "Lire moins" : "Lire plus"}
-            </Text>
-          </TouchableOpacity>
+          {profile?.bio?.trim().length ? (
+            <TouchableOpacity
+              onPress={() => setIsAboutExpanded((prev) => !prev)}
+            >
+              <Text style={styles.readMore}>
+                {isAboutExpanded ? "Lire moins" : "Lire plus"}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         {/* Instruments */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Instruments</Text>
           <View style={styles.chipsRow}>
-            {instruments.map((label) => (
-              <Chip key={label} label={label} />
-            ))}
+            {instruments.length > 0 ? (
+              instruments.map((label) => <Chip key={label} label={label} />)
+            ) : (
+              <Text style={styles.sectionValue}>Aucun instrument</Text>
+            )}
           </View>
         </View>
 
@@ -101,9 +206,11 @@ export const ProfileScreen: React.FC = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Styles musicaux</Text>
           <View style={styles.chipsRow}>
-            {stylesMusicaux.map((label) => (
-              <Chip key={label} label={label} />
-            ))}
+            {stylesMusicaux.length > 0 ? (
+              stylesMusicaux.map((label) => <Chip key={label} label={label} />)
+            ) : (
+              <Text style={styles.sectionValue}>Aucun style</Text>
+            )}
           </View>
         </View>
 
@@ -139,6 +246,18 @@ type ChipProps = {
 const Chip: React.FC<ChipProps> = ({ label }) => (
   <View style={styles.chip}>
     <Text style={styles.chipText}>{label}</Text>
+  </View>
+);
+
+type InfoRowProps = {
+  label: string;
+  value: string;
+};
+
+const InfoRow: React.FC<InfoRowProps> = ({ label, value }) => (
+  <View style={styles.infoRow}>
+    <Text style={styles.infoLabel}>{label}</Text>
+    <Text style={styles.infoValue}>{value}</Text>
   </View>
 );
 
@@ -180,7 +299,7 @@ const styles = StyleSheet.create({
   avatar: {
     width: 150,
     height: 150,
-    borderRadius: 24,
+    borderRadius: 75,
   },
   editAvatarButton: {
     position: "absolute",
@@ -211,6 +330,17 @@ const styles = StyleSheet.create({
     color: Palette.grey600,
     textAlign: "left",
   },
+  statusText: {
+    marginTop: 6,
+    ...Typography.bodyMedium,
+    color: Palette.grey300,
+  },
+  errorText: {
+    marginTop: 6,
+    ...Typography.bodyMedium,
+    color: Palette.primary,
+    textAlign: "center",
+  },
 
   /* Sections */
   section: {
@@ -222,6 +352,18 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   sectionValue: {
+    ...Typography.bodyMedium,
+    color: Palette.bgWhite,
+  },
+  infoRow: {
+    marginTop: 10,
+  },
+  infoLabel: {
+    ...Typography.bodyBold,
+    color: Palette.grey300,
+    marginBottom: 2,
+  },
+  infoValue: {
     ...Typography.bodyMedium,
     color: Palette.bgWhite,
   },
