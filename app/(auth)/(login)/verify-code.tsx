@@ -1,4 +1,5 @@
-import { ButtonLoop, VerificationCodeInput } from "@/components/ui";
+import BackIcon from "@/assets/icons/icons/direction-right-2-outline-white.svg";
+import { ButtonLoop, IconButton, VerificationCodeInput } from "@/components/ui";
 import { Palette, Typography } from "@/constants/theme";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -53,6 +54,14 @@ const VerifyCodeScreen: React.FC = () => {
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.container}
         >
+          <View style={styles.topBar}>
+            <IconButton
+              icon={BackIcon}
+              onPress={() => router.back()}
+              style={{ transform: [{ scaleX: -1 }] }}
+            />
+          </View>
+
           {/* HEADER */}
           <View style={styles.header}>
             <Text style={styles.title}>Vérifie tes e-mails.</Text>
@@ -98,10 +107,15 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "flex-start",
   },
+  topBar: {
+    marginTop: 8,
+    marginBottom: 12,
+    alignItems: "flex-start",
+  },
 
   /* HEADER */
   header: {
-    marginTop: 32,
+    marginTop: 8,
     marginBottom: 12,
   },
   title: {

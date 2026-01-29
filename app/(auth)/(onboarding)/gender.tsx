@@ -4,9 +4,9 @@ import { ButtonLoop } from "@/components/ui";
 import { Palette, Typography } from "@/constants/theme";
 import { formatApiError } from "@/lib/api";
 import { getAccessToken } from "@/lib/session";
-import { updateMyProfile } from "@/lib/user";
+import { getMyProfileCached, updateMyProfile } from "@/lib/user";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 const GENDERS = ["Femme", "Homme", "Non-binaire"] as const;
@@ -16,6 +16,27 @@ export const GenderScreen: React.FC = () => {
   const [selected, setSelected] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const loadProfile = async () => {
+      const token = await getAccessToken();
+      if (!token) return;
+      try {
+        const me = await getMyProfileCached(token);
+        if (!active) return;
+        if (me.profile?.gender) {
+          setSelected((prev) => prev || me.profile?.gender || null);
+        }
+      } catch {
+        // ignore prefill errors
+      }
+    };
+    loadProfile();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleSelect = (gender: string) => {
     setSelected(gender);
@@ -50,7 +71,6 @@ export const GenderScreen: React.FC = () => {
     <OnboardingLayout
       imageSource={require("@/assets/images/auth/background-2.png")}
       progress={0.5}
-      onBack={() => router.back()}
     >
       <Text style={styles.title}>Tu es un.e...</Text>
 

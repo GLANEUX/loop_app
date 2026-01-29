@@ -9,7 +9,9 @@ import { AuthTextField } from "@/components/ui/input/AuthTextField";
 import { Palette, Typography } from "@/constants/theme";
 import { ApiRequestError } from "@/lib/api";
 import { login } from "@/lib/auth";
+import { getOnboardingEntry } from "@/lib/onboarding";
 import { saveSession } from "@/lib/session";
+import { getMyProfileCached } from "@/lib/user";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -43,7 +45,17 @@ export const LoginScreen: React.FC = () => {
     try {
       const session = await login({ email, password });
       await saveSession(session);
-      router.replace("/(tabs)/explore");
+      try {
+        const me = await getMyProfileCached(session.accessToken, true);
+        const entry = getOnboardingEntry(me.profile);
+        if (entry) {
+          router.replace(entry);
+        } else {
+          router.replace("/(tabs)/explore");
+        }
+      } catch {
+        router.replace("/(tabs)/explore");
+      }
     } catch (err) {
       if (err instanceof ApiRequestError) {
         if (err.status === 401 || err.status === 400) {

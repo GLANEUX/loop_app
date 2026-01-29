@@ -1,7 +1,8 @@
 // app/(auth)/(login)/forgot-password.tsx
+import BackIcon from "@/assets/icons/icons/direction-right-2-outline-white.svg";
 import MailIcon from "@/assets/icons/icons/mail-outline-white.svg";
 
-import { ButtonLoop } from "@/components/ui";
+import { ButtonLoop, IconButton } from "@/components/ui";
 import { AuthTextField } from "@/components/ui/input/AuthTextField";
 import { Palette, Typography } from "@/constants/theme";
 import { useRouter } from "expo-router";
@@ -54,6 +55,14 @@ const ForgotPasswordScreen: React.FC = () => {
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.container}
         >
+          <View style={styles.topBar}>
+            <IconButton
+              icon={BackIcon}
+              onPress={() => router.back()}
+              style={{ transform: [{ scaleX: -1 }] }}
+            />
+          </View>
+
           {/* HEADER */}
           <View style={styles.header}>
             <Text style={styles.title}>Mot de passe oublié ?</Text>
@@ -101,10 +110,15 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "flex-start",
   },
+  topBar: {
+    marginTop: 8,
+    marginBottom: 12,
+    alignItems: "flex-start",
+  },
 
   /* HEADER */
   header: {
-    marginTop: 32,
+    marginTop: 8,
     marginBottom: 12,
   },
   title: {

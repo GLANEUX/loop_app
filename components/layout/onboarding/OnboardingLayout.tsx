@@ -1,5 +1,8 @@
 // src/components/onboarding/OnboardingLayout.tsx
 import BackIcon from "@/assets/icons/icons/direction-right-2-outline-white.svg";
+import { getPreviousOnboardingRoute } from "@/lib/onboarding";
+import { useNavigation } from "@react-navigation/native";
+import { usePathname, useRouter } from "expo-router";
 import React, { ReactNode } from "react";
 import {
   ImageBackground,
@@ -18,6 +21,7 @@ interface OnboardingLayoutProps {
   imageSource: ImageSourcePropType;
   progress: number; // 0 -> 1
   onBack?: () => void;
+  disableBack?: boolean;
   children: ReactNode;
 }
 
@@ -25,8 +29,24 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
   imageSource,
   progress,
   onBack,
+  disableBack = false,
   children,
 }) => {
+  const router = useRouter();
+  const navigation = useNavigation();
+  const pathname = usePathname();
+  const previousRoute = getPreviousOnboardingRoute(pathname);
+  const canGoBack =
+    typeof navigation?.canGoBack === "function" ? navigation.canGoBack() : false;
+  const handleBack = disableBack
+    ? undefined
+    : onBack
+      ? onBack
+      : canGoBack
+        ? () => router.back()
+        : previousRoute
+          ? () => router.replace(previousRoute)
+          : undefined;
   const insets = useSafeAreaInsets();
   const keyboardOffset = Platform.OS === "ios" ? insets.top + 12 : 0;
   const scrollBottomPadding = insets.bottom + 120;
@@ -53,10 +73,10 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
         >
           {/* Header : back + progress bar */}
           <View style={styles.headerRow}>
-            {onBack && (
+            {handleBack && (
               <TouchableOpacity
-                onPress={onBack}
-                disabled={!onBack}
+                onPress={handleBack}
+                disabled={!handleBack}
                 style={styles.backButton}
                 activeOpacity={0.8}
               >

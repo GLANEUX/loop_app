@@ -42,6 +42,15 @@ export type UserMe = {
   profile?: UserProfile | null;
 };
 
+type ProfileCache = {
+  data: UserMe;
+  ts: number;
+};
+
+let profileCache: ProfileCache | null = null;
+let profileInFlight: Promise<UserMe> | null = null;
+const PROFILE_CACHE_TTL_MS = 30_000;
+
 export type AvatarUploadInput = {
   uri: string;
   name: string;
@@ -53,6 +62,27 @@ export function getMyProfile(token: string) {
     method: "GET",
     authToken: token,
   });
+}
+
+export function getMyProfileCached(token: string, force = false) {
+  const now = Date.now();
+  if (!force && profileCache && now - profileCache.ts < PROFILE_CACHE_TTL_MS) {
+    return Promise.resolve(profileCache.data);
+  }
+  if (!force && profileInFlight) {
+    return profileInFlight;
+  }
+  profileInFlight = getMyProfile(token)
+    .then((data) => {
+      profileCache = { data, ts: Date.now() };
+      profileInFlight = null;
+      return data;
+    })
+    .catch((err) => {
+      profileInFlight = null;
+      throw err;
+    });
+  return profileInFlight;
 }
 
 export function updateMyAvatar(file: AvatarUploadInput, token: string) {

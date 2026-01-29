@@ -4,9 +4,9 @@ import { ButtonLoop } from "@/components/ui";
 import { Palette, Typography } from "@/constants/theme";
 import { formatApiError } from "@/lib/api";
 import { getAccessToken } from "@/lib/session";
-import { updateMyProfile } from "@/lib/user";
+import { getMyProfileCached, updateMyProfile } from "@/lib/user";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Modal,
   ScrollView,
@@ -38,6 +38,37 @@ export const PhoneStepScreen: React.FC = () => {
   const [countryModalVisible, setCountryModalVisible] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const loadProfile = async () => {
+      const token = await getAccessToken();
+      if (!token) return;
+      try {
+        const me = await getMyProfileCached(token);
+        const phoneNumber = me.profile?.phoneNumber;
+        if (!active || !phoneNumber) return;
+
+        setPhone((prev) => {
+          if (prev) return prev;
+          const matchedCountry =
+            COUNTRIES.find((c) => phoneNumber.startsWith(c.prefix)) || COUNTRIES[0];
+          const digits = phoneNumber
+            .replace(matchedCountry.prefix, "")
+            .replaceAll(/\D/g, "")
+            .slice(0, 10);
+          setCountry(matchedCountry);
+          return digits;
+        });
+      } catch {
+        // ignore prefill errors
+      }
+    };
+    loadProfile();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const openCountryModal = () => setCountryModalVisible(true);
   const closeCountryModal = () => setCountryModalVisible(false);
@@ -75,7 +106,7 @@ export const PhoneStepScreen: React.FC = () => {
       }
 
       await updateMyProfile({ phoneNumber: internationalNumber }, token);
-      router.push("/(onboarding)/sms-code");
+      router.push("/(auth)/(onboarding)/birthdate");
     } catch (err) {
       setError(formatApiError(err));
     } finally {
@@ -89,7 +120,6 @@ export const PhoneStepScreen: React.FC = () => {
     <OnboardingLayout
       imageSource={require("@/assets/images/auth/background-5.png")}
       progress={0.2}
-      onBack={() => router.back()}
     >
       <Text style={styles.title}>Complète ton profil</Text>
       <Text style={styles.subtitle}>

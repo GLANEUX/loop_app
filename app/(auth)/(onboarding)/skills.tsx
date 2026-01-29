@@ -6,7 +6,7 @@ import { Palette, Typography } from "@/constants/theme";
 import { formatApiError } from "@/lib/api";
 import { getInstruments, Instrument } from "@/lib/catalog";
 import { getAccessToken } from "@/lib/session";
-import { updateMyProfile } from "@/lib/user";
+import { getMyProfileCached, updateMyProfile } from "@/lib/user";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -16,6 +16,9 @@ export const SkillsScreen: React.FC = () => {
   const [instruments, setInstruments] = useState<Instrument[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [levelsById, setLevelsById] = useState<Record<string, string>>({});
+  const [profileInstruments, setProfileInstruments] = useState<
+    Array<{ instrument: string; level: string }>
+  >([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingInstruments, setLoadingInstruments] = useState(true);
@@ -42,6 +45,45 @@ export const SkillsScreen: React.FC = () => {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    const loadProfile = async () => {
+      const token = await getAccessToken();
+      if (!token) return;
+      try {
+        const me = await getMyProfileCached(token);
+        if (!active || !me.profile?.instruments?.length) return;
+        setProfileInstruments(me.profile.instruments);
+      } catch {
+        // ignore prefill errors
+      }
+    };
+    loadProfile();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!instruments.length || !profileInstruments.length || selected.length) {
+      return;
+    }
+    const nextSelected: string[] = [];
+    const nextLevels: Record<string, string> = {};
+
+    for (const item of profileInstruments) {
+      const match = instruments.find((inst) => inst.name === item.instrument);
+      if (!match) continue;
+      nextSelected.push(match.id);
+      nextLevels[match.id] = item.level || "Intermediate";
+    }
+
+    if (nextSelected.length) {
+      setSelected(nextSelected);
+      setLevelsById(nextLevels);
+    }
+  }, [instruments, profileInstruments, selected.length]);
 
   const toggle = (id: string) => {
     setSelected((prev) => {
@@ -110,7 +152,6 @@ export const SkillsScreen: React.FC = () => {
     <OnboardingLayout
       imageSource={require("@/assets/images/auth/background-7.png")}
       progress={0.7}
-      onBack={() => router.back()}
     >
       <Text style={styles.title}>Tes compétences</Text>
       <Text style={styles.subtitle}>Guitare, batterie, synthé, voix…</Text>

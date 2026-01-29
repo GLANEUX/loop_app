@@ -1,11 +1,12 @@
 import RightChevronIcon from "@/assets/icons/icons/direction-right-2-outline-white.svg";
 import EditAvatarIcon from "@/assets/icons/icons/edit-outline-white.svg";
+import EyeIcon from "@/assets/icons/icons/eye-1.svg";
 import SettingsIcon from "@/assets/icons/icons/settings-outline-white.svg";
 import { Env } from "@/constants/env";
 import { Palette, Typography } from "@/constants/theme";
 import { formatApiError } from "@/lib/api";
 import { getAccessToken } from "@/lib/session";
-import { getMyProfile, UserMe } from "@/lib/user";
+import { getMyProfile, updateMyAvatar, UserMe } from "@/lib/user";
 import { router } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
@@ -17,6 +18,8 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import * as FileSystem from "expo-file-system/legacy";
+import * as DocumentPicker from "expo-document-picker";
 
 const fallbackAvatar = require("@/assets/images/landing/landing-9.jpg");
 
@@ -34,8 +37,10 @@ const formatDate = (value?: string | null) => {
 export const ProfileScreen: React.FC = () => {
   const [user, setUser] = useState<UserMe | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [avatarLocalUri, setAvatarLocalUri] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [avatarLoading, setAvatarLoading] = useState(false);
 
   const [isAboutExpanded, setIsAboutExpanded] = useState(false);
   const handleOnClic = () => {
@@ -80,6 +85,16 @@ export const ProfileScreen: React.FC = () => {
     };
   }, []);
 
+  const refreshProfile = async (active = true) => {
+    if (!token) return;
+    try {
+      const data = await getMyProfile(token);
+      if (active) setUser(data);
+    } catch (err) {
+      if (active) setError(formatApiError(err));
+    }
+  };
+
   const profile = user?.profile;
   const displayName = useMemo(() => {
     const parts = [profile?.firstName, profile?.lastName].filter(Boolean);
@@ -88,18 +103,106 @@ export const ProfileScreen: React.FC = () => {
   }, [profile?.firstName, profile?.lastName, user?.pseudo]);
 
   const handle = user?.pseudo ? `@${user.pseudo}` : user?.email || "";
-  const avatarUriBase = profile?.avatarUrl
-    ? profile.avatarUrl
-    : profile?.hasAvatar
-      ? `${Env.API_URL}/user/me/avatar`
-      : null;
+  const avatarUriBase =
+    profile?.hasAvatar === false
+      ? null
+      : profile?.avatarUrl
+        ? profile.avatarUrl
+        : profile?.hasAvatar === true
+          ? `${Env.API_URL}/user/me/avatar`
+          : null;
   const avatarVersion = profile?.updatedAt || "";
   const avatarUri =
     avatarUriBase && avatarVersion
       ? `${avatarUriBase}?v=${encodeURIComponent(avatarVersion)}`
       : avatarUriBase;
+  useEffect(() => {
+    let active = true;
+    const downloadAvatar = async () => {
+      if (!token || !profile?.hasAvatar || !avatarUri) {
+        if (active) setAvatarLocalUri(null);
+        return;
+      }
+      const cacheDir = FileSystem.cacheDirectory;
+      if (!cacheDir) return;
+      const safeVersion = avatarVersion ? encodeURIComponent(avatarVersion) : "latest";
+      const fileUri = `${cacheDir}avatar-${user?.id ?? "me"}-${safeVersion}.img`;
+
+      try {
+        const info = await FileSystem.getInfoAsync(fileUri);
+        if (info.exists) {
+          if (active) setAvatarLocalUri(fileUri);
+          return;
+        }
+        const result = await FileSystem.downloadAsync(avatarUri, fileUri, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (active && result?.uri) {
+          setAvatarLocalUri(result.uri);
+        }
+      } catch {
+        if (active) setAvatarLocalUri(null);
+      }
+    };
+    downloadAvatar();
+    return () => {
+      active = false;
+    };
+  }, [token, profile?.hasAvatar, avatarUri, avatarVersion, user?.id]);
+
+  const handleChangeAvatar = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        multiple: false,
+        copyToCacheDirectory: true,
+        type: ["image/*"],
+      });
+
+      if (result.canceled) return;
+      const asset = result.assets[0];
+      if (!asset?.uri) {
+        setError("Impossible de récupérer l'image.");
+        return;
+      }
+
+      const originalUri = asset.uri;
+      let finalUri = originalUri;
+      const fileName = asset.name ?? `avatar-${Date.now()}`;
+
+      if (originalUri.startsWith("content://") && FileSystem.cacheDirectory) {
+        const dest = `${FileSystem.cacheDirectory}${fileName}`;
+        await FileSystem.copyAsync({ from: originalUri, to: dest });
+        finalUri = dest;
+      }
+
+      if (!token) {
+        setError("Tu dois être connecté pour continuer.");
+        return;
+      }
+
+      setAvatarLoading(true);
+      await updateMyAvatar(
+        {
+          uri: finalUri,
+          name: fileName,
+          type: asset.mimeType ?? "image/jpeg",
+        },
+        token,
+      );
+      await refreshProfile();
+    } catch (err) {
+      setError(formatApiError(err));
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
+
   const avatarSource =
-    avatarUri && token
+    avatarLocalUri
+      ? { uri: avatarLocalUri }
+      : avatarUri && token
       ? { uri: avatarUri, headers: { Authorization: `Bearer ${token}` } }
       : avatarUri
         ? { uri: avatarUri }
@@ -122,6 +225,9 @@ export const ProfileScreen: React.FC = () => {
       >
         {/* HEADER : avatar centré + settings en haut à droite */}
         <View style={styles.header}>
+          <TouchableOpacity style={styles.eyeButton}>
+            <EyeIcon width={22} height={22} />
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.settingsButton}
             onPress={handleOnClic}
@@ -131,7 +237,11 @@ export const ProfileScreen: React.FC = () => {
 
           <View style={styles.avatarWrapper}>
             <Image source={avatarSource} style={styles.avatar} />
-            <TouchableOpacity style={styles.editAvatarButton}>
+            <TouchableOpacity
+              style={styles.editAvatarButton}
+              onPress={handleChangeAvatar}
+              disabled={avatarLoading}
+            >
               <EditAvatarIcon width={25} height={25} />
             </TouchableOpacity>
           </View>
@@ -287,6 +397,16 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 0,
     right: 0,
+    width: 40,
+    height: 50,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  eyeButton: {
+    position: "absolute",
+    top: 0,
+    left: 0,
     width: 40,
     height: 50,
     borderRadius: 22,

@@ -1,6 +1,6 @@
 // app/_layout.tsx
 import { DefaultTheme, ThemeProvider } from "@react-navigation/native";
-import { Stack } from "expo-router";
+import { Stack, usePathname } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
 
@@ -11,6 +11,7 @@ import { useEffect } from "react";
 void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  const pathname = usePathname();
   const [fontsLoaded] = useFonts({
     Poppins_Black: require("@/assets/fonts/Poppins-Black.ttf"),
     Poppins_BlackItalic: require("@/assets/fonts/Poppins-BlackItalic.ttf"),
@@ -48,6 +49,12 @@ export default function RootLayout() {
       });
     }
   }, [fontsLoaded]);
+
+  useEffect(() => {
+    if (pathname) {
+      console.log("[nav] current route", pathname);
+    }
+  }, [pathname]);
 
   if (!fontsLoaded) return null;
 

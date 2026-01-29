@@ -17,7 +17,6 @@ export const UploadSuccessScreen: React.FC = () => {
     <OnboardingLayout
       imageSource={require("@/assets/images/auth/background-3.png")}
       progress={1}
-      onBack={() => router.back()}
     >
       <Text style={styles.title}>
         Tu pourras en ajouter d’autres directement sur ton profil

@@ -4,9 +4,9 @@ import { ButtonLoop } from "@/components/ui";
 import { Palette, Typography } from "@/constants/theme";
 import { formatApiError } from "@/lib/api";
 import { getAccessToken } from "@/lib/session";
-import { updateMyProfile } from "@/lib/user";
+import { getMyProfileCached, updateMyProfile } from "@/lib/user";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, TextInput, View } from "react-native";
 
 export const BioScreen: React.FC = () => {
@@ -14,6 +14,25 @@ export const BioScreen: React.FC = () => {
   const [bio, setBio] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const loadProfile = async () => {
+      const token = await getAccessToken();
+      if (!token) return;
+      try {
+        const me = await getMyProfileCached(token);
+        if (!active || !me.profile?.bio) return;
+        setBio((prev) => prev || me.profile?.bio || "");
+      } catch {
+        // ignore prefill errors
+      }
+    };
+    loadProfile();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleContinue = async () => {
     const trimmed = bio.trim();
@@ -32,7 +51,7 @@ export const BioScreen: React.FC = () => {
       }
 
       await updateMyProfile({ bio: trimmed }, token);
-      router.push("/(onboarding)/upload-tracks");
+      router.push("/(auth)/(onboarding)/welcome-rules");
     } catch (err) {
       setError(formatApiError(err));
     } finally {
@@ -44,7 +63,6 @@ export const BioScreen: React.FC = () => {
     <OnboardingLayout
       imageSource={require("@/assets/images/auth/background-4.png")}
       progress={0.9}
-      onBack={() => router.back()}
     >
       <Text style={styles.title}>Ta bio</Text>
       <Text style={styles.subtitle}>

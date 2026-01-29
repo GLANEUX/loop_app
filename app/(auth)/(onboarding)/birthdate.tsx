@@ -4,9 +4,9 @@ import { ButtonLoop } from "@/components/ui";
 import { Palette, Typography } from "@/constants/theme";
 import { formatApiError } from "@/lib/api";
 import { getAccessToken } from "@/lib/session";
-import { updateMyProfile } from "@/lib/user";
+import { getMyProfileCached, updateMyProfile } from "@/lib/user";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, TextInput, View } from "react-native";
 
 export const BirthdateScreen: React.FC = () => {
@@ -14,6 +14,29 @@ export const BirthdateScreen: React.FC = () => {
   const [birthdate, setBirthdate] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const loadProfile = async () => {
+      const token = await getAccessToken();
+      if (!token) return;
+      try {
+        const me = await getMyProfileCached(token);
+        const raw = me.profile?.birthDate;
+        if (!active || !raw) return;
+        const [year, month, day] = raw.split("-");
+        if (year && month && day) {
+          setBirthdate((prev) => prev || `${day}/${month}/${year}`);
+        }
+      } catch {
+        // ignore prefill errors
+      }
+    };
+    loadProfile();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleChange = (value: string) => {
     // on garde seulement les chiffres
@@ -97,7 +120,6 @@ export const BirthdateScreen: React.FC = () => {
     <OnboardingLayout
       imageSource={require("@/assets/images/auth/background-4.png")}
       progress={0.4}
-      onBack={() => router.back()}
     >
       <Text style={styles.title}>Ta date de naissance</Text>
       <Text style={styles.subtitle}>

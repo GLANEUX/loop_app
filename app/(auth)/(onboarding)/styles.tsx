@@ -6,7 +6,7 @@ import { Palette, Typography } from "@/constants/theme";
 import { formatApiError } from "@/lib/api";
 import { getGenres, Genre } from "@/lib/catalog";
 import { getAccessToken } from "@/lib/session";
-import { updateMyProfile } from "@/lib/user";
+import { getMyProfileCached, updateMyProfile } from "@/lib/user";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -15,6 +15,7 @@ export const StylesScreen: React.FC = () => {
   const router = useRouter();
   const [genres, setGenres] = useState<Genre[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
+  const [profileGenres, setProfileGenres] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingGenres, setLoadingGenres] = useState(true);
@@ -41,6 +42,35 @@ export const StylesScreen: React.FC = () => {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    const loadProfile = async () => {
+      const token = await getAccessToken();
+      if (!token) return;
+      try {
+        const me = await getMyProfileCached(token);
+        if (!active || !me.profile?.genres?.length) return;
+        setProfileGenres(me.profile.genres);
+      } catch {
+        // ignore prefill errors
+      }
+    };
+    loadProfile();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!genres.length || !profileGenres.length || selected.length) return;
+    const matchedIds = genres
+      .filter((genre) => profileGenres.includes(genre.name))
+      .map((genre) => genre.id);
+    if (matchedIds.length) {
+      setSelected(matchedIds);
+    }
+  }, [genres, profileGenres, selected.length]);
 
   const toggle = (id: string) => {
     setSelected((prev) => {
@@ -87,7 +117,6 @@ export const StylesScreen: React.FC = () => {
     <OnboardingLayout
       imageSource={require("@/assets/images/auth/background-3.png")}
       progress={0.6}
-      onBack={() => router.back()}
     >
       <Text style={styles.title}>Tes styles</Text>
       <Text style={styles.subtitle}>Indique tes genres de prédilection.</Text>

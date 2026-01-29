@@ -99,7 +99,6 @@ export const AvatarScreen: React.FC = () => {
     <OnboardingLayout
       imageSource={require("@/assets/images/auth/background-5.png")}
       progress={0.8}
-      onBack={() => router.back()}
     >
       <Text style={styles.title}>Choisis un avatar</Text>
       <Text style={styles.subtitle}>

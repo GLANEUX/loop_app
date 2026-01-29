@@ -4,9 +4,9 @@ import { ButtonLoop } from "@/components/ui";
 import { Palette, Typography } from "@/constants/theme";
 import { formatApiError } from "@/lib/api";
 import { getAccessToken } from "@/lib/session";
-import { updateMyProfile } from "@/lib/user";
+import { getMyProfileCached, updateMyProfile } from "@/lib/user";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, TextInput, View } from "react-native";
 
 export const NameScreen: React.FC = () => {
@@ -15,6 +15,26 @@ export const NameScreen: React.FC = () => {
   const [lastName, setLastName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const loadProfile = async () => {
+      const token = await getAccessToken();
+      if (!token) return;
+      try {
+        const me = await getMyProfileCached(token);
+        if (!active || !me.profile) return;
+        setFirstName((prev) => prev || me.profile?.firstName || "");
+        setLastName((prev) => prev || me.profile?.lastName || "");
+      } catch {
+        // ignore prefill errors
+      }
+    };
+    loadProfile();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleContinue = async () => {
     if (!firstName.trim() || !lastName.trim()) {
@@ -51,7 +71,7 @@ export const NameScreen: React.FC = () => {
     <OnboardingLayout
       imageSource={require("@/assets/images/auth/background-7.png")}
       progress={0.1}
-      onBack={() => router.back()}
+      disableBack
     >
       <Text style={styles.title}>Ton nom</Text>
       <Text style={styles.subtitle}>Indique ton prénom et ton nom.</Text>

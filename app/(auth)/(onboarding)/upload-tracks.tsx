@@ -65,7 +65,6 @@ export const UploadTracksScreen: React.FC = () => {
     <OnboardingLayout
       imageSource={require("@/assets/images/auth/background-3.png")}
       progress={0.95}
-      onBack={() => router.back()}
     >
       <Text style={styles.title}>
         Ajoute un ou plusieurs extraits de tes compositions
