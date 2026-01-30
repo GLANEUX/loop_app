@@ -21,10 +21,9 @@ import { clearSession, getAccessToken } from "@/lib/session";
 import { getMyProfileCached, UserMe } from "@/lib/user";
 import * as FileSystem from "expo-file-system/legacy";
 
-import BackIcon from "@/assets/icons/icons/arrow-right-outline-white.svg";
 import RightChevronIcon from "@/assets/icons/icons/direction-right-2-outline-white.svg";
+import EyeIcon from "@/assets/icons/icons/eye-1.svg";
 import InfoIcon from "@/assets/icons/icons/information-circle-outline-white.svg";
-import PlayIcon from "@/assets/icons/icons/mdi-play-1.svg";
 import BellIcon from "@/assets/icons/icons/notification-2-outline-white.svg";
 import UserIcon from "@/assets/icons/icons/user-outline-white.svg";
 import { ButtonLoop } from "@/components/ui";
@@ -61,9 +60,6 @@ export const ProfileSettingsScreen: React.FC = () => {
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
-  const handleOnClic = () => {
-    router.replace("/(tabs)/profile");
-  };
 
   const handleLogout = async () => {
     if (loggingOut) return;
@@ -195,13 +191,11 @@ export const ProfileSettingsScreen: React.FC = () => {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        {/* Back */}
-        <TouchableOpacity style={styles.backButton} onPress={handleOnClic}>
-          <BackIcon
-            width={22}
-            height={22}
-            style={{ transform: [{ scaleX: -1 }] }}
-          />
+        <TouchableOpacity
+          style={styles.eyeButton}
+          onPress={() => router.replace("/(settings)/profile")}
+        >
+          <EyeIcon width={22} height={22} />
         </TouchableOpacity>
 
         {/* Header user */}
@@ -221,10 +215,22 @@ export const ProfileSettingsScreen: React.FC = () => {
 
         {/* Bloc principal de lignes */}
         <View style={styles.rowsGroup}>
-          <SettingsRow label="Informations" Icon={InfoIcon} />
-          <SettingsRow label="Editer le profil" Icon={UserIcon} />
-          <SettingsRow label="Notifications" Icon={BellIcon} />
-          <SettingsRow label="Gérer mon abonnement" Icon={PlayIcon} />
+          <SettingsRow
+            label="Informations"
+            Icon={InfoIcon}
+            onPress={() => router.push("/(settings)/information")}
+          />
+          <SettingsRow
+            label="Editer le profil"
+            Icon={UserIcon}
+            onPress={() => router.push("/(settings)/profile-edit")}
+          />
+          <SettingsRow
+            label="Notifications"
+            Icon={BellIcon}
+            onPress={() => router.push("/(settings)/notifications")}
+          />
+          {/* <SettingsRow label="Gérer mon abonnement" Icon={PlayIcon} /> */}
         </View>
 
         <View style={styles.rowsGroupSecondary}>
@@ -265,6 +271,15 @@ const styles = StyleSheet.create({
     height: 32,
     justifyContent: "center",
     alignItems: "flex-start",
+  },
+  eyeButton: {
+    position: "absolute",
+    top: 8,
+    right: 0,
+    width: 32,
+    height: 32,
+    alignItems: "flex-end",
+    justifyContent: "center",
   },
 
   /* Header user */

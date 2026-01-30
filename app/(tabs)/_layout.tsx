@@ -1,8 +1,4 @@
 // app/(tabs)/_layout.tsx
-import FriendIconWhite from "@/assets/icons/icons/friends-outline-white.svg";
-import FriendIconBlack from "@/assets/icons/icons/friends-outline.svg";
-import HomeIconWhite from "@/assets/icons/icons/home-5-outline-white.svg";
-import HomeIconBlack from "@/assets/icons/icons/home-5-outline.svg";
 import MessageIconWhite from "@/assets/icons/icons/message-outline-white.svg";
 import MessageIconBlack from "@/assets/icons/icons/message-outline.svg";
 import MusicIconWhite from "@/assets/icons/icons/music-white.svg";
@@ -20,19 +16,11 @@ export default function TabsLayout() {
       tabBar={(props) => <LoopTabBar {...props} />}
     >
       <Tabs.Screen
-        name="match"
+        name="messages"
         options={{
-          title: "Match",
+          title: "Messages",
           tabBarIcon: ({ color, focused }) =>
-            focused ? <HomeIconWhite /> : <HomeIconBlack />,
-        }}
-      />
-      <Tabs.Screen
-        name="pro"
-        options={{
-          title: "Pro",
-          tabBarIcon: ({ color, focused }) =>
-            focused ? <FriendIconWhite /> : <FriendIconBlack />,
+            focused ? <MessageIconWhite /> : <MessageIconBlack />,
         }}
       />
       <Tabs.Screen
@@ -43,17 +31,9 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="messages"
+        name="settings"
         options={{
-          title: "Messages",
-          tabBarIcon: ({ color, focused }) =>
-            focused ? <MessageIconWhite /> : <MessageIconBlack />,
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: "Profile",
+          title: "Profil",
           tabBarIcon: ({ color, focused }) =>
             focused ? <UserIconWhite /> : <UserIconBlack />,
         }}

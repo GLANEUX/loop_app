@@ -3,6 +3,7 @@ import { ApiRequestError, ApiErrorPayload, apiRequest } from "@/lib/api";
 import * as FileSystem from "expo-file-system/legacy";
 
 export type ProfileUpdateInput = {
+  pseudo?: string;
   firstName?: string;
   lastName?: string;
   phoneNumber?: string;

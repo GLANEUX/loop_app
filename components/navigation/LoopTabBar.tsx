@@ -160,11 +160,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 999,
     backgroundColor: Palette.bgWhite,
-    width: "90%",
+    width: "70%",
     alignSelf: "center",
   },
   tab: {
