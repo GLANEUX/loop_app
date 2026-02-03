@@ -46,10 +46,6 @@ export const AuthLandingScreen: React.FC = () => {
     router.replace("/(auth)/(signup)/signup");
   };
 
-  const handleSocial = (provider: "facebook" | "apple" | "google") => {
-    console.log("Social provider:", provider);
-  };
-
   const handleInfoPress = () => {
     router.replace("/(landing)/landing-1");
   };

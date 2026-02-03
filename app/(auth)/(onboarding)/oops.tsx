@@ -1,7 +1,6 @@
 import { OnboardingLayout } from "@/components/layout";
 import { ButtonLoop } from "@/components/ui";
 import { Palette, Typography } from "@/constants/theme";
-import { OnboardingRoutes } from "@/lib/onboarding";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";

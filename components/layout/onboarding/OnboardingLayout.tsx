@@ -3,10 +3,11 @@ import BackIcon from "@/assets/icons/icons/direction-right-2-outline-white.svg";
 import { getPreviousOnboardingRoute } from "@/lib/onboarding";
 import { useNavigation } from "@react-navigation/native";
 import { usePathname, useRouter } from "expo-router";
-import React, { ReactNode } from "react";
+import React, { ReactNode, useEffect, useState } from "react";
 import {
   ImageBackground,
   ImageSourcePropType,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -48,8 +49,22 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
           ? () => router.replace(previousRoute)
           : undefined;
   const insets = useSafeAreaInsets();
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const keyboardOffset = Platform.OS === "ios" ? insets.top + 12 : 0;
-  const scrollBottomPadding = insets.bottom + 120;
+  const scrollBottomPadding = isKeyboardVisible ? 24 : insets.bottom + 120;
+
+  useEffect(() => {
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSub = Keyboard.addListener(showEvent, () => setIsKeyboardVisible(true));
+    const hideSub = Keyboard.addListener(hideEvent, () => setIsKeyboardVisible(false));
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   return (
     <ImageBackground
@@ -67,7 +82,7 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
             styles.safeArea,
             {
               paddingTop: insets.top + 25,
-              paddingBottom: insets.bottom + 8,
+              paddingBottom: isKeyboardVisible ? 0 : insets.bottom + 8,
             },
           ]}
         >

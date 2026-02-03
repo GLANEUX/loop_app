@@ -1,8 +1,9 @@
 import { Env } from "@/constants/env";
-import { ApiRequestError, ApiErrorPayload, apiRequest } from "@/lib/api";
+import { ApiErrorPayload, ApiRequestError, apiRequest } from "@/lib/api";
 import * as FileSystem from "expo-file-system/legacy";
 
 export type ProfileUpdateInput = {
+  email?: string;
   pseudo?: string;
   firstName?: string;
   lastName?: string;
@@ -134,4 +135,46 @@ export function updateMyProfile(payload: ProfileUpdateInput, token: string) {
     authToken: token,
     body: JSON.stringify(payload),
   });
+}
+
+export async function updateMyEmail(email: string, token: string) {
+  try {
+    return await apiRequest("/user/me/email", {
+      method: "PATCH",
+      authToken: token,
+      body: JSON.stringify({ email }),
+    });
+  } catch (err) {
+    if (err instanceof ApiRequestError && [404, 405].includes(err.status)) {
+      return apiRequest("/user/me", {
+        method: "PATCH",
+        authToken: token,
+        body: JSON.stringify({ email }),
+      });
+    }
+    throw err;
+  }
+}
+
+export async function updateMyPassword(
+  currentPassword: string,
+  newPassword: string,
+  token: string,
+) {
+  try {
+    return await apiRequest("/user/me/password", {
+      method: "PATCH",
+      authToken: token,
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+  } catch (err) {
+    if (err instanceof ApiRequestError && [404, 405].includes(err.status)) {
+      return apiRequest("/auth/change-password", {
+        method: "POST",
+        authToken: token,
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+    }
+    throw err;
+  }
 }

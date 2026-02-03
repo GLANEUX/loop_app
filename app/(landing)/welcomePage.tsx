@@ -25,7 +25,7 @@ export default function WelcomePage() {
       router.replace("/(landing)/landing-1");
     }, 2000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [rotation]);
 
   const spin = rotation.interpolate({
     inputRange: [0, 1],
@@ -51,7 +51,7 @@ export default function WelcomePage() {
         />
 
         <Text style={styles.title}>
-          Rejoins-nous là où les{"\n"}musiciens s'accordent
+          Rejoins-nous là où les{"\n"}musiciens s&apos;accordent
         </Text>
       </View>
 

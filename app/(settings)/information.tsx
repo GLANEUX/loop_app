@@ -1,6 +1,8 @@
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -8,16 +10,18 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import BackIcon from "@/assets/icons/icons/arrow-right-outline-white.svg";
+import ChevronRightIcon from "@/assets/icons/icons/direction-right-2-outline-white.svg";
 import { ButtonLoop } from "@/components/ui";
 import { Palette, Typography } from "@/constants/theme";
 import { formatApiError } from "@/lib/api";
 import { getAccessToken } from "@/lib/session";
-import { getMyProfileCached, UserMe } from "@/lib/user";
+import { getMyProfileCached, updateMyPassword, UserMe } from "@/lib/user";
 
 export default function InformationScreen() {
+  const insets = useSafeAreaInsets();
   const [user, setUser] = useState<UserMe | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -25,6 +29,9 @@ export default function InformationScreen() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [savingPassword, setSavingPassword] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -55,74 +62,132 @@ export default function InformationScreen() {
   const email = user?.email || "johndoe21@gmail.com";
   const phone = user?.profile?.phoneNumber || "+33678439376";
 
+  const handleSavePassword = async () => {
+    setSubmitError(null);
+    setSubmitSuccess(null);
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setSubmitError("Remplis les 3 champs mot de passe.");
+      return;
+    }
+    if (newPassword.length < 6) {
+      setSubmitError("Le nouveau mot de passe doit contenir au moins 6 caracteres.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setSubmitError("La confirmation ne correspond pas.");
+      return;
+    }
+
+    setSavingPassword(true);
+    try {
+      const token = await getAccessToken();
+      if (!token) {
+        setSubmitError("Tu dois etre connecte pour continuer.");
+        return;
+      }
+      await updateMyPassword(currentPassword, newPassword, token);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setSubmitSuccess("Mot de passe mis a jour.");
+    } catch (err) {
+      setSubmitError(formatApiError(err));
+    } finally {
+      setSavingPassword(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView
+      <KeyboardAvoidingView
         style={styles.container}
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? insets.top + 8 : 0}
       >
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={router.back}>
-            <BackIcon
-              width={22}
-              height={22}
-              style={{ transform: [{ scaleX: -1 }] }}
-            />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Informations</Text>
-        </View>
-
-        {loadingProfile && (
-          <Text style={styles.statusText}>Chargement...</Text>
-        )}
-        {profileError && <Text style={styles.errorText}>{profileError}</Text>}
-
-        <View style={styles.formCard}>
-          <InfoRow label="E-mail" value={email} />
-          <InfoRow label="E-mail" value={phone} />
-          <EditableRow label="Mot de passe actuel">
-            <TextInput
-              style={styles.input}
-              value={currentPassword}
-              onChangeText={setCurrentPassword}
-              placeholder="••••••"
-              placeholderTextColor={Palette.grey600}
-              secureTextEntry
-            />
-          </EditableRow>
-          <EditableRow label="Nouveau mot de passe">
-            <TextInput
-              style={styles.input}
-              value={newPassword}
-              onChangeText={setNewPassword}
-              placeholder="Insérez..."
-              placeholderTextColor={Palette.grey600}
-              secureTextEntry
-            />
-          </EditableRow>
-          <EditableRow label="Confirmez" isLast>
-            <TextInput
-              style={styles.input}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              placeholder="Insérez..."
-              placeholderTextColor={Palette.grey600}
-              secureTextEntry
-            />
-          </EditableRow>
-        </View>
-
-        <ButtonLoop label="Enregistrer" onPress={() => {}} style={styles.save} />
-
-        <TouchableOpacity
-          style={styles.deleteButton}
-          onPress={() => router.push("/(settings)/delete-account")}
-          activeOpacity={0.85}
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.contentContainer}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.deleteText}>Supprimer mon compte</Text>
-        </TouchableOpacity>
-      </ScrollView>
+          <View style={styles.header}>
+            <TouchableOpacity style={styles.backButton} onPress={router.back}>
+              <BackIcon
+                width={22}
+                height={22}
+                style={{ transform: [{ scaleX: -1 }] }}
+              />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Informations</Text>
+          </View>
+
+          {loadingProfile && <Text style={styles.statusText}>Chargement...</Text>}
+          {profileError && <Text style={styles.errorText}>{profileError}</Text>}
+
+          <View style={styles.formCard}>
+            <InfoRow
+              label="E-mail"
+              value={email}
+              onPress={() => router.push("/(settings)/information-email")}
+            />
+            <InfoRow
+              label="Telephone"
+              value={phone}
+              onPress={() => router.push("/(settings)/information-phone")}
+            />
+            <EditableRow label="Mot de passe actuel">
+              <TextInput
+                style={styles.input}
+                value={currentPassword}
+                onChangeText={setCurrentPassword}
+                placeholder="••••••"
+                placeholderTextColor={Palette.grey600}
+                secureTextEntry
+              />
+            </EditableRow>
+            <EditableRow label="Nouveau mot de passe">
+              <TextInput
+                style={styles.input}
+                value={newPassword}
+                onChangeText={setNewPassword}
+                placeholder="Inserez..."
+                placeholderTextColor={Palette.grey600}
+                secureTextEntry
+              />
+            </EditableRow>
+            <EditableRow label="Confirmez" isLast>
+              <TextInput
+                style={styles.input}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder="Inserez..."
+                placeholderTextColor={Palette.grey600}
+                secureTextEntry
+              />
+            </EditableRow>
+          </View>
+
+          {!!submitError && <Text style={styles.errorText}>{submitError}</Text>}
+          {!!submitSuccess && <Text style={styles.successText}>{submitSuccess}</Text>}
+
+          <ButtonLoop
+            label="Enregistrer"
+            onPress={handleSavePassword}
+            loading={savingPassword}
+            style={styles.save}
+          />
+
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={() => router.push("/(settings)/delete-account")}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.deleteText}>Supprimer mon compte</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -130,14 +195,23 @@ export default function InformationScreen() {
 type InfoRowProps = {
   label: string;
   value: string;
+  onPress?: () => void;
   isLast?: boolean;
 };
 
-const InfoRow: React.FC<InfoRowProps> = ({ label, value, isLast }) => (
-  <View style={[styles.row, isLast && styles.rowLast]}>
+const InfoRow: React.FC<InfoRowProps> = ({ label, value, onPress, isLast }) => (
+  <TouchableOpacity
+    style={[styles.row, isLast && styles.rowLast]}
+    onPress={onPress}
+    disabled={!onPress}
+    activeOpacity={onPress ? 0.75 : 1}
+  >
     <Text style={styles.rowLabel}>{label}</Text>
-    <Text style={styles.rowValue}>{value}</Text>
-  </View>
+    <View style={styles.rowRight}>
+      <Text style={styles.rowValue}>{value}</Text>
+      {onPress && <ChevronRightIcon width={18} height={18} />}
+    </View>
+  </TouchableOpacity>
 );
 
 type EditableRowProps = {
@@ -167,7 +241,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingHorizontal: 24,
-    paddingBottom: 48,
+    paddingBottom: 140,
   },
   header: {
     marginTop: 8,
@@ -198,6 +272,12 @@ const styles = StyleSheet.create({
     color: Palette.primary,
     textAlign: "center",
   },
+  successText: {
+    marginTop: 12,
+    ...Typography.bodyMedium,
+    color: Palette.valid,
+    textAlign: "center",
+  },
   formCard: {
     marginTop: 30,
     borderTopWidth: 1,
@@ -220,6 +300,12 @@ const styles = StyleSheet.create({
     ...Typography.bodyBold,
     color: Palette.bgWhite,
   },
+  rowRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    maxWidth: "60%",
+  },
   rowValue: {
     ...Typography.bodyMedium,
     color: Palette.primary,
@@ -232,7 +318,7 @@ const styles = StyleSheet.create({
   },
   input: {
     ...Typography.bodyMedium,
-    color: Palette.grey600,
+    color: Palette.bgWhite,
     textAlign: "right",
     minWidth: 140,
   },

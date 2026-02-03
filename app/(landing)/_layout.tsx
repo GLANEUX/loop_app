@@ -39,7 +39,7 @@ export default function LandingLayout() {
     return () => {
       active = false;
     };
-  }, [router, pathname]);
+  }, [router, pathname, segments]);
 
   if (checking) return null;
   return <Stack screenOptions={{ headerShown: false }} />;

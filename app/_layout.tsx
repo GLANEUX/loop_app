@@ -7,6 +7,7 @@ import "react-native-reanimated";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -59,18 +60,20 @@ export default function RootLayout() {
   if (!fontsLoaded) return null;
 
   return (
-    <ThemeProvider value={DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="(landing)" />
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(settings)" />
-        <Stack.Screen name="(tabs)" />
-        {/*<Stack.Screen name="(messages)" />
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider value={DefaultTheme}>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="(landing)" />
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(settings)" />
+          <Stack.Screen name="(tabs)" />
+          {/*<Stack.Screen name="(messages)" />
         <Stack.Screen name="(match)" />
         <Stack.Screen name="(pro)" />*/}
-      </Stack>
-      <StatusBar style="light" />
-    </ThemeProvider>
+        </Stack>
+        <StatusBar style="light" />
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }

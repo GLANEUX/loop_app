@@ -1,24 +1,184 @@
-import React from "react";
+import React, { useCallback, useState } from "react";
 import {
+  Dimensions,
   Image,
   ImageBackground,
+  ImageSourcePropType,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { useRouter } from "expo-router";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { scheduleOnRN } from "react-native-worklets";
 
-import BellIcon from "@/assets/icons/icons/notification-2-outline-white.svg";
 import CloseIcon from "@/assets/icons/icons/close-outline-white.svg";
 import PlayIcon from "@/assets/icons/icons/mdi-play-1.svg";
 import StarIcon from "@/assets/icons/icons/shine-star.svg";
 import { Palette, Typography } from "@/constants/theme";
 
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.28;
+const EXIT_X = SCREEN_WIDTH * 1.2;
+
+type SwipeDirection = "left" | "right";
+
+type ExploreCardData = {
+  id: string;
+  name: string;
+  distance: string;
+  coverImage: ImageSourcePropType;
+};
+
+const EXPLORE_CARDS: ExploreCardData[] = [
+  {
+    id: "mathis",
+    name: "Mathis",
+    distance: "5km",
+    coverImage: require("@/assets/images/landing/landing-7.jpg"),
+  },
+  {
+    id: "ines",
+    name: "Ines",
+    distance: "3km",
+    coverImage: require("@/assets/images/landing/landing-8.jpg"),
+  },
+  {
+    id: "leo",
+    name: "Leo",
+    distance: "7km",
+    coverImage: require("@/assets/images/landing/landing-5.jpg"),
+  },
+];
+
+function ExploreCard({ coverImage }: { coverImage: ImageSourcePropType }) {
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardInner}>
+        <Image source={coverImage} style={styles.cover} />
+      </View>
+
+      <View style={styles.progressRow}>
+        <View style={styles.progressTrack}>
+          <View style={styles.progressFill} />
+        </View>
+        <View style={styles.progressTimes}>
+          <Text style={styles.timeText}>0:15</Text>
+          <Text style={styles.timeText}>0:45</Text>
+        </View>
+      </View>
+
+      <TouchableOpacity style={styles.playButton} activeOpacity={0.85}>
+        <PlayIcon width={22} height={22} />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 export default function ExploreTabScreen() {
+  const router = useRouter();
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+
+  const currentCard = EXPLORE_CARDS[currentIndex];
+
+  const moveToNextCard = useCallback(() => {
+    setCurrentIndex((prev) => (prev + 1) % EXPLORE_CARDS.length);
+    translateX.value = 0;
+    translateY.value = 0;
+  }, [translateX, translateY]);
+
+  const triggerSwipe = useCallback(
+    (direction: SwipeDirection) => {
+      const directionValue = direction === "right" ? 1 : -1;
+      translateY.value = withTiming(0, { duration: 220 });
+      translateX.value = withTiming(
+        directionValue * EXIT_X,
+        { duration: 220 },
+        (finished) => {
+          if (finished) {
+            scheduleOnRN(moveToNextCard);
+          }
+        },
+      );
+    },
+    [moveToNextCard, translateX, translateY],
+  );
+
+  const panGesture = Gesture.Pan()
+    .onUpdate((event) => {
+      translateX.value = event.translationX;
+      translateY.value = event.translationY;
+    })
+    .onEnd(() => {
+      if (Math.abs(translateX.value) > SWIPE_THRESHOLD) {
+        const directionValue = translateX.value > 0 ? 1 : -1;
+        translateY.value = withTiming(0, { duration: 220 });
+        translateX.value = withTiming(
+          directionValue * EXIT_X,
+          { duration: 220 },
+          (finished) => {
+            if (finished) {
+              scheduleOnRN(moveToNextCard);
+            }
+          },
+        );
+        return;
+      }
+
+      translateX.value = withSpring(0, { damping: 14, stiffness: 170 });
+      translateY.value = withSpring(0, { damping: 14, stiffness: 170 });
+    });
+
+  const swipeCardStyle = useAnimatedStyle(() => {
+    const rotate = interpolate(
+      translateX.value,
+      [-SCREEN_WIDTH, 0, SCREEN_WIDTH],
+      [-14, 0, 14],
+      Extrapolation.CLAMP,
+    );
+
+    return {
+      transform: [
+        { translateX: translateX.value },
+        { translateY: translateY.value },
+        { rotate: `${rotate}deg` },
+      ],
+    };
+  });
+
+  const leftBadgeStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      translateX.value,
+      [-SWIPE_THRESHOLD, 0],
+      [1, 0],
+      Extrapolation.CLAMP,
+    ),
+  }));
+
+  const rightBadgeStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      translateX.value,
+      [0, SWIPE_THRESHOLD],
+      [0, 1],
+      Extrapolation.CLAMP,
+    ),
+  }));
+
   return (
     <ImageBackground
-      source={require("@/assets/images/landing/landing-2.jpg")}
+      source={require("@/assets/images/landing/landing-25.png")}
       style={styles.background}
       imageStyle={styles.backgroundImage}
     >
@@ -27,51 +187,61 @@ export default function ExploreTabScreen() {
 
         <View style={styles.content}>
           <View style={styles.topRow}>
-            <View style={styles.userPill}>
+            <TouchableOpacity
+              style={styles.userPill}
+              activeOpacity={0.85}
+              onPress={() => router.push(`/(settings)/user/${currentCard.id}`)}
+            >
               <Image
-                source={require("@/assets/images/landing/landing-6.jpg")}
+                source={currentCard.coverImage}
                 style={styles.userAvatar}
               />
-              <Text style={styles.userText}>Mathis, 5km</Text>
-            </View>
-            <TouchableOpacity style={styles.bellButton} activeOpacity={0.8}>
-              <BellIcon width={22} height={22} />
+              <Text style={styles.userText}>
+                {currentCard.name}, {currentCard.distance}
+              </Text>
             </TouchableOpacity>
           </View>
 
-          <View style={styles.card}>
-            <View style={styles.cardInner}>
-              <TouchableOpacity style={styles.profileChip} activeOpacity={0.8}>
-                <Text style={styles.profileChipText}>Voir le profil</Text>
-              </TouchableOpacity>
-              <Image
-                source={require("@/assets/images/landing/landing-7.jpg")}
-                style={styles.cover}
-              />
-            </View>
+          <View style={styles.cardDeck}>
+            <GestureDetector gesture={panGesture}>
+              <Animated.View style={swipeCardStyle}>
+                <ExploreCard coverImage={currentCard.coverImage} />
 
-            <View style={styles.progressRow}>
-              <View style={styles.progressTrack}>
-                <View style={styles.progressFill} />
-              </View>
-              <View style={styles.progressTimes}>
-                <Text style={styles.timeText}>0:15</Text>
-                <Text style={styles.timeText}>0:45</Text>
-              </View>
-            </View>
+                <Animated.View
+                  style={[
+                    styles.swipeBadge,
+                    styles.swipeBadgeLeft,
+                    leftBadgeStyle,
+                  ]}
+                >
+                  <Text style={styles.swipeBadgeText}>NON</Text>
+                </Animated.View>
 
-            <TouchableOpacity style={styles.playButton} activeOpacity={0.85}>
-              <PlayIcon width={22} height={22} />
-            </TouchableOpacity>
+                <Animated.View
+                  style={[
+                    styles.swipeBadge,
+                    styles.swipeBadgeRight,
+                    rightBadgeStyle,
+                  ]}
+                >
+                  <Text style={styles.swipeBadgeText}>LIKE</Text>
+                </Animated.View>
+              </Animated.View>
+            </GestureDetector>
           </View>
 
           <View style={styles.actionsRow}>
-            <TouchableOpacity style={styles.actionButton} activeOpacity={0.8}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              activeOpacity={0.8}
+              onPress={() => triggerSwipe("left")}
+            >
               <CloseIcon width={22} height={22} />
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionButton, styles.actionButtonPrimary]}
               activeOpacity={0.8}
+              onPress={() => triggerSwipe("right")}
             >
               <StarIcon width={20} height={20} />
             </TouchableOpacity>
@@ -133,6 +303,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  cardDeck: {
+    height: 390,
+    justifyContent: "center",
+  },
   card: {
     backgroundColor: "rgba(0,0,0,0.65)",
     borderRadius: 26,
@@ -140,8 +314,6 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   cardInner: {
-    backgroundColor: "rgba(0,0,0,0.6)",
-    borderRadius: 18,
     padding: 16,
     alignItems: "center",
     justifyContent: "center",
@@ -195,6 +367,27 @@ const styles = StyleSheet.create({
     backgroundColor: Palette.primary,
     alignItems: "center",
     justifyContent: "center",
+  },
+  swipeBadge: {
+    position: "absolute",
+    top: 30,
+    borderWidth: 2,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: "rgba(0,0,0,0.2)",
+  },
+  swipeBadgeLeft: {
+    left: 20,
+    borderColor: "#FF7474",
+  },
+  swipeBadgeRight: {
+    right: 20,
+    borderColor: "#7BE69A",
+  },
+  swipeBadgeText: {
+    ...Typography.bodyBold,
+    color: Palette.bgWhite,
   },
   actionsRow: {
     flexDirection: "row",

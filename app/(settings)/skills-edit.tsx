@@ -21,7 +21,7 @@ export default function SkillsEditScreen() {
   const [selected, setSelected] = useState<string[]>([]);
   const [levelsById, setLevelsById] = useState<Record<string, string>>({});
   const [profileInstruments, setProfileInstruments] = useState<
-    Array<{ instrument: string; level: string }>
+    { instrument: string; level: string }[]
   >([]);
   const [error, setError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -135,7 +135,7 @@ export default function SkillsEditScreen() {
           level: levelsById[id] || "Intermediate",
         };
       })
-      .filter(Boolean) as Array<{ instrument: string; level: string }>;
+      .filter(Boolean) as { instrument: string; level: string }[];
 
     setLoading(true);
     setError(null);

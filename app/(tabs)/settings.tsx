@@ -174,16 +174,6 @@ export const ProfileSettingsScreen: React.FC = () => {
         ? { uri: avatarUri }
         : require("@/assets/images/landing/landing-9.jpg");
 
-  const formatDate = (value?: string | null) => {
-    if (!value) return "Non renseignée";
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) return value;
-    return parsed.toLocaleDateString("fr-FR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
@@ -191,28 +181,29 @@ export const ProfileSettingsScreen: React.FC = () => {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        <TouchableOpacity
-          style={styles.eyeButton}
-          onPress={() => router.replace("/(settings)/profile")}
-        >
-          <EyeIcon width={22} height={22} />
-        </TouchableOpacity>
-
         {/* Header user */}
         <View style={styles.userHeader}>
           <Image source={avatarSource} style={styles.avatar} />
-          <View style={styles.userTextBlock}>
-            <Text style={styles.name}>{displayName}</Text>
-            {!!handle && <Text style={styles.handle}>{handle}</Text>}
-            {loadingProfile && (
-              <Text style={styles.statusText}>Chargement...</Text>
-            )}
-            {profileError && (
-              <Text style={styles.errorText}>{profileError}</Text>
-            )}
+          <View style={styles.userInfoWrap}>
+            <TouchableOpacity
+              style={styles.eyeButton}
+              onPress={() => router.push("/(settings)/profile")}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <EyeIcon width={22} height={22} />
+            </TouchableOpacity>
+            <View style={styles.userTextBlock}>
+              <Text style={styles.name}>{displayName}</Text>
+              {!!handle && <Text style={styles.handle}>{handle}</Text>}
+              {loadingProfile && (
+                <Text style={styles.statusText}>Chargement...</Text>
+              )}
+              {profileError && (
+                <Text style={styles.errorText}>{profileError}</Text>
+              )}
+            </View>
           </View>
         </View>
-
         {/* Bloc principal de lignes */}
         <View style={styles.rowsGroup}>
           <SettingsRow
@@ -232,12 +223,11 @@ export const ProfileSettingsScreen: React.FC = () => {
           />
           {/* <SettingsRow label="Gérer mon abonnement" Icon={PlayIcon} /> */}
         </View>
-
         <View style={styles.rowsGroupSecondary}>
           <SettingsRow label="Aide et support" />
           <SettingsRow label="Conditions d’utilisation" />
         </View>
-
+        {/* TODO: Add onPress handlers */}
         <ButtonLoop
           label="Se déconnecter"
           onPress={handleLogout}
@@ -274,17 +264,18 @@ const styles = StyleSheet.create({
   },
   eyeButton: {
     position: "absolute",
-    top: 8,
+    top: 0,
     right: 0,
-    width: 32,
-    height: 32,
-    alignItems: "flex-end",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
     justifyContent: "center",
   },
 
   /* Header user */
   userHeader: {
-    marginTop: 24,
+    marginTop: 16,
     flexDirection: "row",
     alignItems: "center",
   },
@@ -293,8 +284,15 @@ const styles = StyleSheet.create({
     height: 110,
     borderRadius: 20,
   },
-  userTextBlock: {
+  userInfoWrap: {
     marginLeft: 16,
+    flex: 1,
+    minHeight: 110,
+    justifyContent: "center",
+    paddingRight: 52,
+  },
+  userTextBlock: {
+    justifyContent: "center",
   },
   name: {
     ...Typography.title2Bold,
@@ -362,17 +360,3 @@ const styles = StyleSheet.create({
     color: Palette.bgWhite,
   },
 });
-
-const InfoRow: React.FC<{ label: string; value: string }> = ({
-  label,
-  value,
-}) => (
-  <View>
-    <Text style={{ ...Typography.bodyBold, color: Palette.grey300 }}>
-      {label}
-    </Text>
-    <Text style={{ ...Typography.bodyMedium, color: Palette.bgWhite }}>
-      {value}
-    </Text>
-  </View>
-);
