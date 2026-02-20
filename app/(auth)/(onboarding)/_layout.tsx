@@ -8,7 +8,7 @@ export default function OnboardingLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
-        animation: "slide_from_right", // animation fluide entre les étapes
+        animation: "ios_from_right", // animation fluide entre les étapes
         gestureEnabled: false, // empêche de skip avec le swipe-back sur iOS
         contentStyle: { backgroundColor: Palette.bgBlack },
         animationTypeForReplace: "pop",

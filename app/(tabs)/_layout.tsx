@@ -5,6 +5,7 @@ import MusicIconWhite from "@/assets/icons/icons/music-white.svg";
 import UserIconWhite from "@/assets/icons/icons/user-outline-white.svg";
 import UserIconBlack from "@/assets/icons/icons/user-outline.svg";
 import { LoopTabBar } from "@/components/navigation/LoopTabBar";
+import { Palette } from "@/constants/theme";
 import { Tabs } from "expo-router";
 
 export default function TabsLayout() {
@@ -12,6 +13,7 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        sceneStyle: { backgroundColor: Palette.bgBlack },
       }}
       tabBar={(props) => <LoopTabBar {...props} />}
     >

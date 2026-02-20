@@ -47,3 +47,7 @@ app-example
 .env.prod
 
 .vscode/*
+
+.agents
+GEMINI.md
+PRPs

@@ -1,5 +1,6 @@
 // app/_layout.tsx
 import { DefaultTheme, ThemeProvider } from "@react-navigation/native";
+import { Palette } from "@/constants/theme";
 import { Stack, usePathname } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
@@ -60,9 +61,23 @@ export default function RootLayout() {
   if (!fontsLoaded) return null;
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <ThemeProvider value={DefaultTheme}>
-        <Stack screenOptions={{ headerShown: false }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: Palette.bgBlack }}>
+      <ThemeProvider
+        value={{
+          ...DefaultTheme,
+          colors: {
+            ...DefaultTheme.colors,
+            background: Palette.bgBlack,
+          },
+        }}
+      >
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            animation: "ios_from_right",
+            contentStyle: { backgroundColor: Palette.bgBlack },
+          }}
+        >
           <Stack.Screen name="index" />
           <Stack.Screen name="(landing)" />
           <Stack.Screen name="(auth)" />

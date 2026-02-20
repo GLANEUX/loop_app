@@ -1,6 +1,7 @@
 import { getOnboardingEntry } from "@/lib/onboarding";
 import { getAccessToken } from "@/lib/session";
 import { getMyProfileCached } from "@/lib/user";
+import { Palette } from "@/constants/theme";
 import { Stack, usePathname, useRouter, useSegments } from "expo-router";
 import React, { useEffect, useState } from "react";
 
@@ -42,5 +43,13 @@ export default function LandingLayout() {
   }, [router, pathname, segments]);
 
   if (checking) return null;
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        animation: "ios_from_right",
+        contentStyle: { backgroundColor: Palette.bgBlack },
+      }}
+    />
+  );
 }

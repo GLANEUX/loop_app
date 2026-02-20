@@ -1,5 +1,14 @@
+import { Palette } from "@/constants/theme";
 import { Stack } from "expo-router";
 
 export default function AuthLoginLayout() {
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        animation: "ios_from_right",
+        contentStyle: { backgroundColor: Palette.bgBlack },
+      }}
+    />
+  );
 }
