@@ -1,31 +1,36 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Dimensions,
-  Image,
   ImageBackground,
-  ImageSourcePropType,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   Extrapolation,
   interpolate,
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
   withTiming,
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { scheduleOnRN } from "react-native-worklets";
+
+import { LinearGradient } from "expo-linear-gradient";
 
 import CloseIcon from "@/assets/icons/icons/close-outline-white.svg";
 import PlayIcon from "@/assets/icons/icons/mdi-play-1.svg";
 import StarIcon from "@/assets/icons/icons/shine-star.svg";
 import { Palette, Typography } from "@/constants/theme";
+import { discoverProfiles, dislikeUser, likeUser, MatchingProfile } from "@/lib/matching";
+import { getAccessToken } from "@/lib/session";
+import { Env } from "@/constants/env";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.28;
@@ -33,39 +38,39 @@ const EXIT_X = SCREEN_WIDTH * 1.2;
 
 type SwipeDirection = "left" | "right";
 
-type ExploreCardData = {
-  id: string;
-  name: string;
-  distance: string;
-  coverImage: ImageSourcePropType;
-};
+const fallbackAvatar = require("@/assets/images/landing/landing-7.jpg");
 
-const EXPLORE_CARDS: ExploreCardData[] = [
-  {
-    id: "mathis",
-    name: "Mathis",
-    distance: "5km",
-    coverImage: require("@/assets/images/landing/landing-7.jpg"),
-  },
-  {
-    id: "ines",
-    name: "Ines",
-    distance: "3km",
-    coverImage: require("@/assets/images/landing/landing-8.jpg"),
-  },
-  {
-    id: "leo",
-    name: "Leo",
-    distance: "7km",
-    coverImage: require("@/assets/images/landing/landing-5.jpg"),
-  },
-];
+function ExploreCard({ profile, token }: { profile: MatchingProfile; token?: string | null }) {
+  const avatarUriBase =
+    profile?.hasAvatar === false
+      ? null
+      : profile?.avatarUrl
+        ? profile.avatarUrl
+        : profile?.hasAvatar === true
+          ? `${Env.API_URL}/user/profiles/${profile.userId}/avatar`
+          : null;
 
-function ExploreCard({ coverImage }: { coverImage: ImageSourcePropType }) {
+  const avatarSource = avatarUriBase
+    ? {
+        uri: avatarUriBase,
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      }
+    : fallbackAvatar;
+
   return (
     <View style={styles.card}>
       <View style={styles.cardInner}>
-        <Image source={coverImage} style={styles.cover} />
+        <Image 
+          source={avatarSource} 
+          style={styles.cover}
+          contentFit="cover"
+          transition={200}
+          cachePolicy="memory-disk"
+        />
+        <LinearGradient
+          colors={["transparent", "rgba(0,0,0,0.7)"]}
+          style={StyleSheet.absoluteFill}
+        />
       </View>
 
       <View style={styles.progressRow}>
@@ -87,33 +92,99 @@ function ExploreCard({ coverImage }: { coverImage: ImageSourcePropType }) {
 
 export default function ExploreTabScreen() {
   const router = useRouter();
+  const [profiles, setProfiles] = useState<MatchingProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
 
-  const currentCard = EXPLORE_CARDS[currentIndex];
+  const currentProfile = profiles[currentIndex];
+
+  const fetchProfiles = useCallback(async () => {
+    try {
+      setLoading(true);
+      const sessionToken = await getAccessToken();
+      if (!sessionToken) {
+        setError("Session expirée");
+        return;
+      }
+      setToken(sessionToken);
+      const data = await discoverProfiles(sessionToken);
+      setProfiles(data);
+      setCurrentIndex(0);
+    } catch (err) {
+      console.error("[Explore] Failed to fetch profiles:", err);
+      setError("Impossible de charger les profils");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchProfiles();
+  }, [fetchProfiles]);
+
+  const handleSwipeInteraction = useCallback(async (direction: SwipeDirection, profile: MatchingProfile) => {
+    try {
+      const sessionToken = await getAccessToken();
+      if (!sessionToken) return;
+
+      if (direction === "right") {
+        const response = await likeUser(sessionToken, profile.userId);
+        if (response.matched) {
+          router.push({
+            pathname: "/(match)/it-is-a-match",
+            params: {
+              matchId: response.matchId,
+              targetUserId: profile.userId,
+              targetName: profile.firstName || "Utilisateur",
+            }
+          });
+        }
+      } else {
+        await dislikeUser(sessionToken, profile.userId);
+      }
+    } catch (err) {
+      console.error(`[Explore] Failed to ${direction} user:`, err);
+    }
+  }, [router]);
 
   const moveToNextCard = useCallback(() => {
-    setCurrentIndex((prev) => (prev + 1) % EXPLORE_CARDS.length);
+    const nextIndex = currentIndex + 1;
+    if (nextIndex >= profiles.length) {
+      // Si plus de profils, on recharge
+      fetchProfiles();
+    } else {
+      setCurrentIndex(nextIndex);
+    }
     translateX.value = 0;
     translateY.value = 0;
-  }, [translateX, translateY]);
+  }, [currentIndex, profiles.length, fetchProfiles, translateX, translateY]);
 
   const triggerSwipe = useCallback(
     (direction: SwipeDirection) => {
+      if (!currentProfile) return;
+
       const directionValue = direction === "right" ? 1 : -1;
+
+      // Appel API en arrière-plan
+      handleSwipeInteraction(direction, currentProfile);
+
       translateY.value = withTiming(0, { duration: 220 });
       translateX.value = withTiming(
         directionValue * EXIT_X,
         { duration: 220 },
         (finished) => {
           if (finished) {
-            scheduleOnRN(moveToNextCard);
+            runOnJS(moveToNextCard)();
           }
         },
       );
     },
-    [moveToNextCard, translateX, translateY],
+    [currentProfile, handleSwipeInteraction, moveToNextCard, translateX, translateY],
   );
 
   const panGesture = Gesture.Pan()
@@ -124,13 +195,19 @@ export default function ExploreTabScreen() {
     .onEnd(() => {
       if (Math.abs(translateX.value) > SWIPE_THRESHOLD) {
         const directionValue = translateX.value > 0 ? 1 : -1;
+        const direction: SwipeDirection = translateX.value > 0 ? "right" : "left";
+
+        if (currentProfile) {
+          runOnJS(handleSwipeInteraction)(direction, currentProfile);
+        }
+
         translateY.value = withTiming(0, { duration: 220 });
         translateX.value = withTiming(
           directionValue * EXIT_X,
           { duration: 220 },
           (finished) => {
             if (finished) {
-              scheduleOnRN(moveToNextCard);
+              runOnJS(moveToNextCard)();
             }
           },
         );
@@ -176,6 +253,52 @@ export default function ExploreTabScreen() {
     ),
   }));
 
+  if (loading && profiles.length === 0) {
+    return (
+      <View style={[styles.background, styles.centered]}>
+        <ActivityIndicator size="large" color={Palette.primary} />
+      </View>
+    );
+  }
+
+  if (error && profiles.length === 0) {
+    return (
+      <View style={[styles.background, styles.centered]}>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={fetchProfiles}>
+          <Text style={styles.retryText}>Réessayer</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (profiles.length === 0 || !currentProfile) {
+    return (
+      <View style={[styles.background, styles.centered]}>
+        <Text style={styles.emptyText}>Plus de profils pour le moment...</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={fetchProfiles}>
+          <Text style={styles.retryText}>Actualiser</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const avatarUriBase =
+    currentProfile?.hasAvatar === false
+      ? null
+      : currentProfile?.avatarUrl
+        ? currentProfile.avatarUrl
+        : currentProfile?.hasAvatar === true
+          ? `${Env.API_URL}/user/profiles/${currentProfile.userId}/avatar`
+          : null;
+
+  const userAvatarSource = avatarUriBase
+    ? {
+        uri: avatarUriBase,
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      }
+    : fallbackAvatar;
+
   return (
     <ImageBackground
       source={require("@/assets/images/landing/landing-25.png")}
@@ -190,14 +313,16 @@ export default function ExploreTabScreen() {
             <TouchableOpacity
               style={styles.userPill}
               activeOpacity={0.85}
-              onPress={() => router.push(`/(settings)/user/${currentCard.id}`)}
+              onPress={() => router.push(`/(settings)/user/${currentProfile.userId}`)}
             >
               <Image
-                source={currentCard.coverImage}
+                source={userAvatarSource}
                 style={styles.userAvatar}
+                transition={200}
+                cachePolicy="memory-disk"
               />
               <Text style={styles.userText}>
-                {currentCard.name}, {currentCard.distance}
+                {currentProfile.firstName || currentProfile.userId.slice(0, 8)}, {currentProfile.distance?.toFixed(0) || 1}km
               </Text>
             </TouchableOpacity>
           </View>
@@ -205,7 +330,7 @@ export default function ExploreTabScreen() {
           <View style={styles.cardDeck}>
             <GestureDetector gesture={panGesture}>
               <Animated.View style={swipeCardStyle}>
-                <ExploreCard coverImage={currentCard.coverImage} />
+                <ExploreCard profile={currentProfile} token={token} />
 
                 <Animated.View
                   style={[
@@ -267,6 +392,11 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.45)",
   },
+  centered: {
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
   content: {
     flex: 1,
     paddingHorizontal: 24,
@@ -297,12 +427,6 @@ const styles = StyleSheet.create({
     ...Typography.smallLight,
     color: Palette.black,
   },
-  bellButton: {
-    width: 34,
-    height: 34,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   cardDeck: {
     height: 390,
     justifyContent: "center",
@@ -318,23 +442,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  profileChip: {
-    position: "absolute",
-    top: 12,
-    right: 12,
-    backgroundColor: "rgba(255,255,255,0.9)",
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  profileChipText: {
-    ...Typography.smallLight,
-    color: Palette.black,
-  },
   cover: {
     width: 170,
     height: 170,
     borderRadius: 10,
+    backgroundColor: "#1D2329",
   },
   progressRow: {
     gap: 6,
@@ -406,4 +518,25 @@ const styles = StyleSheet.create({
   actionButtonPrimary: {
     backgroundColor: Palette.primary,
   },
+  emptyText: {
+    ...Typography.bodyMedium,
+    color: Palette.grey300,
+    marginBottom: 20,
+  },
+  errorText: {
+    ...Typography.bodyMedium,
+    color: Palette.primary,
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: Palette.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  retryText: {
+    ...Typography.bodyBold,
+    color: Palette.bgWhite,
+  },
 });
+

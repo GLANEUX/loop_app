@@ -1,142 +1,235 @@
 import { router, useLocalSearchParams } from "expo-router";
-import React from "react";
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Image } from "expo-image";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import BackIcon from "@/assets/icons/icons/arrow-right-outline-white.svg";
 import { Palette, Typography } from "@/constants/theme";
+import { getAccessToken, getStoredUser, StoredUser } from "@/lib/session";
+import { getMessages, Message, sendMessage, Thread, getThreads } from "@/lib/messages";
+import { Env } from "@/constants/env";
 
-const CHAT_DATA: Record<
-  string,
-  { name: string; status: string; avatar: any }
-> = {
-  abigail: {
-    name: "Abigail",
-    status: "En ligne il y a 8 heures",
-    avatar: require("@/assets/images/landing/landing-1.jpg"),
-  },
-  elizabeth: {
-    name: "Elizabeth",
-    status: "En ligne il y a 2 heures",
-    avatar: require("@/assets/images/landing/landing-2.jpg"),
-  },
-  emelie: {
-    name: "Emelie",
-    status: "En ligne il y a 1 heure",
-    avatar: require("@/assets/images/landing/landing-7.jpg"),
-  },
-  penelope: {
-    name: "Penelope",
-    status: "En ligne il y a 20 minutes",
-    avatar: require("@/assets/images/landing/landing-8.jpg"),
-  },
-  chloe: {
-    name: "Chloe",
-    status: "En ligne il y a 5 heures",
-    avatar: require("@/assets/images/landing/landing-8.jpg"),
-  },
-  me: {
-    name: "Moi",
-    status: "En ligne",
-    avatar: require("@/assets/images/landing/landing-9.jpg"),
-  },
-  emma: {
-    name: "Emma",
-    status: "En ligne il y a 1 heure",
-    avatar: require("@/assets/images/landing/landing-3.jpg"),
-  },
-  ava: {
-    name: "Ava",
-    status: "En ligne il y a 3 heures",
-    avatar: require("@/assets/images/landing/landing-4.jpg"),
-  },
-  sophia: {
-    name: "Sophia",
-    status: "En ligne il y a 4 heures",
-    avatar: require("@/assets/images/landing/landing-5.jpg"),
-  },
-  bapt: {
-    name: "Bapt",
-    status: "En ligne il y a 6 heures",
-    avatar: require("@/assets/images/landing/landing-6.jpg"),
-  },
-};
+const fallbackAvatar = require("@/assets/images/landing/landing-1.jpg");
 
 export default function MessageDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const chat = (id && CHAT_DATA[id]) || CHAT_DATA.abigail;
+  const { id: matchId } = useLocalSearchParams<{ id: string }>();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [inputText, setInputText] = useState("");
+  const [partner, setPartner] = useState<Thread | null>(null);
+  const [me, setMe] = useState<StoredUser | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  
+  const insets = useSafeAreaInsets();
+  const flatListRef = useRef<FlatList>(null);
+
+  const fetchMatchAndMessages = useCallback(async () => {
+    try {
+      const sessionToken = await getAccessToken();
+      const currentUser = await getStoredUser();
+      if (!sessionToken || !matchId) return;
+
+      setToken(sessionToken);
+      setMe(currentUser);
+
+      const [threads, msgsResponse] = await Promise.all([
+        getThreads(sessionToken),
+        getMessages(sessionToken, matchId, { limit: 50 }),
+      ]);
+
+      const currentThread = threads.find((t) => t.matchId === matchId);
+      if (currentThread) {
+        setPartner(currentThread);
+      }
+
+      setMessages(msgsResponse.messages);
+    } catch (err) {
+      console.error("[MessageDetail] Failed to fetch:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [matchId]);
+
+  useEffect(() => {
+    fetchMatchAndMessages();
+    
+    // Polling simple pour les nouveaux messages
+    const interval = setInterval(() => {
+      if (token && matchId) {
+        getMessages(token, matchId, { limit: 20 }).then((res) => {
+          setMessages(res.messages);
+        }).catch(err => console.error("Polling error", err));
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [fetchMatchAndMessages, token, matchId]);
+
+  const handleSend = async () => {
+    if (!inputText.trim() || !token || !matchId || sending) return;
+
+    setSending(true);
+    const textToSend = inputText.trim();
+    setInputText("");
+
+    try {
+      const newMessage = await sendMessage(token, matchId, textToSend);
+      setMessages((prev) => [...prev, newMessage]);
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+    } catch (err) {
+      console.error("[MessageDetail] Failed to send:", err);
+      setInputText(textToSend); // Restore text on failure
+    } finally {
+      setSending(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.safeArea, styles.centered]}>
+        <ActivityIndicator size="large" color={Palette.primary} />
+      </View>
+    );
+  }
+
+  const partnerProfile = partner?.profile;
+  const avatarUri = partnerProfile?.hasAvatar 
+    ? `${Env.API_URL}/user/profiles/${partnerProfile.id}/avatar`
+    : null;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={router.back}>
-          <BackIcon
-            width={22}
-            height={22}
-            style={{ transform: [{ scaleX: -1 }] }}
-          />
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Image source={chat.avatar} style={styles.headerAvatar} />
-          <View>
-            <Text style={styles.headerName}>{chat.name}</Text>
-            <Text style={styles.headerStatus}>{chat.status}</Text>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={router.back}>
+            <BackIcon
+              width={22}
+              height={22}
+              style={{ transform: [{ scaleX: -1 }] }}
+            />
+          </TouchableOpacity>
+          <View style={styles.headerCenter}>
+            <Image 
+              source={avatarUri ? { uri: avatarUri, headers: { Authorization: `Bearer ${token}` } } : fallbackAvatar} 
+              style={styles.headerAvatar} 
+            />
+            <View>
+              <Text style={styles.headerName}>
+                {partnerProfile?.firstName || partnerProfile?.pseudo || "Utilisateur"}
+              </Text>
+              <Text style={styles.headerStatus}>En ligne</Text>
+            </View>
+          </View>
+          <View style={styles.headerMenu} />
+        </View>
+        <View style={styles.headerDivider} />
+
+        {/* Messages List */}
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.contentContainer}
+          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
+          keyboardDismissMode="on-drag"
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>Pas encore de messages.</Text>
+              <Text style={styles.emptySubtext}>Commencez à discuter !</Text>
+            </View>
+          }
+          renderItem={({ item }) => {
+            const isMe = item.authorProfileId !== partnerProfile?.id;
+
+            if (item.type === "system") {
+              return (
+                <View style={styles.systemMessage}>
+                  <Text style={styles.systemText}>{item.body}</Text>
+                </View>
+              );
+            }
+
+            return (
+              <View style={[
+                styles.bubble, 
+                isMe ? styles.bubbleRight : styles.bubbleLeft
+              ]}>
+                {!isMe && (
+                  <Text style={styles.bubbleName}>
+                    {partnerProfile?.firstName || "Partenaire"}
+                  </Text>
+                )}
+                <Text style={isMe ? styles.bubbleText : styles.bubbleTextDark}>
+                  {item.body}
+                </Text>
+                <Text style={isMe ? styles.timeText : styles.timeTextDark}>
+                  {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+              </View>
+            );
+          }}
+        />
+
+        {/* Input Bar */}
+        <View style={styles.inputBarContainer}>
+          <View style={styles.inputBar}>
+            <TextInput
+              style={styles.input}
+              placeholder="Ecrire un message..."
+              placeholderTextColor={Palette.grey600}
+              value={inputText}
+              onChangeText={setInputText}
+              multiline
+            />
+            <TouchableOpacity 
+              style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]} 
+              onPress={handleSend}
+              disabled={!inputText.trim() || sending}
+            >
+              {sending ? (
+                <ActivityIndicator size="small" color={Palette.bgWhite} />
+              ) : (
+                <View style={styles.sendIcon} />
+              )}
+            </TouchableOpacity>
           </View>
         </View>
-        <View style={styles.headerMenu} />
-      </View>
-
-      <View style={styles.headerDivider} />
-
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={[styles.bubble, styles.bubbleRight]}>
-          <Text style={styles.bubbleText}>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit consequat.
-          </Text>
-          <Text style={styles.timeText}>16.04</Text>
-        </View>
-
-        <View style={styles.bubbleLeft}>
-          <Text style={styles.bubbleName}>John Doe</Text>
-          <Text style={styles.bubbleTextDark}>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
-            eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
-            ad minim veniam, quis nostrud exercitation ullamco laboris nisi.
-          </Text>
-          <Text style={styles.timeTextDark}>16.04</Text>
-        </View>
-
-        <View style={styles.voiceBubble}>
-          <View style={styles.voicePlay} />
-          <View style={styles.voiceWave} />
-          <Text style={styles.voiceTime}>0:05</Text>
-          <View style={styles.voiceIcon} />
-        </View>
-
-        <View style={[styles.bubble, styles.bubbleRight]}>
-          <Text style={styles.bubbleText}>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
-            eiusmod tempor incididunt ut labore et dolore magna aliqua
-          </Text>
-          <Text style={styles.timeText}>16.04</Text>
-        </View>
-      </ScrollView>
-
-      <View style={styles.inputBar}>
-        <Text style={styles.inputPlaceholder}>Ecrire un message...</Text>
-        <View style={styles.inputMic} />
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Palette.bgBlack,
+  },
   safeArea: {
     flex: 1,
+    backgroundColor: Palette.bgBlack,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: Palette.bgBlack,
   },
   header: {
@@ -146,6 +239,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    backgroundColor: Palette.bgBlack,
   },
   backButton: {
     width: 32,
@@ -162,6 +256,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
+    backgroundColor: "#1D2329",
   },
   headerName: {
     ...Typography.bodyBold,
@@ -179,109 +274,124 @@ const styles = StyleSheet.create({
     height: 2,
     backgroundColor: Palette.primary,
   },
-  container: {
-    flex: 1,
-  },
   contentContainer: {
     paddingHorizontal: 24,
     paddingTop: 24,
-    paddingBottom: 140,
-    gap: 22,
+    paddingBottom: 20,
+    gap: 16,
   },
   bubble: {
-    alignSelf: "flex-end",
-    backgroundColor: Palette.primary,
     borderRadius: 18,
-    padding: 16,
-    maxWidth: "78%",
+    padding: 14,
+    maxWidth: "80%",
   },
   bubbleRight: {
-    borderTopRightRadius: 6,
+    alignSelf: "flex-end",
+    backgroundColor: Palette.primary,
+    borderTopRightRadius: 4,
+  },
+  bubbleLeft: {
+    alignSelf: "flex-start",
+    backgroundColor: Palette.bgWhite,
+    borderTopLeftRadius: 4,
+  },
+  bubbleName: {
+    ...Typography.bodyBold,
+    color: Palette.black,
+    marginBottom: 4,
+    fontSize: 12,
   },
   bubbleText: {
     ...Typography.bodyMedium,
     color: Palette.bgWhite,
   },
-  timeText: {
-    marginTop: 8,
-    ...Typography.smallLight,
-    color: Palette.bgWhite,
-    textAlign: "right",
-  },
-  bubbleLeft: {
-    alignSelf: "flex-start",
-    backgroundColor: Palette.bgWhite,
-    borderRadius: 18,
-    padding: 16,
-    maxWidth: "86%",
-  },
-  bubbleName: {
-    ...Typography.bodyBold,
-    color: Palette.black,
-    marginBottom: 6,
-  },
   bubbleTextDark: {
     ...Typography.bodyMedium,
     color: Palette.black,
   },
-  timeTextDark: {
-    marginTop: 8,
+  timeText: {
+    marginTop: 6,
     ...Typography.smallLight,
-    color: Palette.grey700,
+    color: "rgba(255,255,255,0.7)",
     textAlign: "right",
+    fontSize: 10,
   },
-  voiceBubble: {
-    alignSelf: "flex-start",
-    backgroundColor: Palette.bgWhite,
+  timeTextDark: {
+    marginTop: 6,
+    ...Typography.smallLight,
+    color: Palette.grey600,
+    textAlign: "right",
+    fontSize: 10,
+  },
+  systemMessage: {
+    alignSelf: "center",
+    backgroundColor: "rgba(255,255,255,0.1)",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    marginVertical: 8,
+  },
+  systemText: {
+    ...Typography.smallLight,
+    color: Palette.grey300,
+    fontSize: 11,
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 100,
+    gap: 8,
+  },
+  emptyText: {
+    ...Typography.bodyMedium,
+    color: Palette.grey300,
+  },
+  emptySubtext: {
+    ...Typography.bodyBold,
+    color: Palette.primary,
+  },
+  inputBarContainer: {
+    backgroundColor: Palette.bgBlack,
+    paddingTop: 10,
+    paddingHorizontal: 24,
+    paddingBottom: Platform.OS === 'android' ? 10 : 0, // Insets handles bottom on iOS via SafeAreaView
+  },
+  inputBar: {
+    backgroundColor: Palette.bgWhite,
+    borderRadius: 28,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    marginBottom: 10,
   },
-  voicePlay: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: Palette.primary,
-  },
-  voiceWave: {
+  input: {
     flex: 1,
-    height: 12,
-    backgroundColor: Palette.grey300,
-    borderRadius: 6,
-    minWidth: 120,
-  },
-  voiceTime: {
     ...Typography.bodyMedium,
-    color: Palette.grey700,
+    color: Palette.black,
+    maxHeight: 100,
+    paddingTop: 8,
+    paddingBottom: 8,
   },
-  voiceIcon: {
-    width: 18,
-    height: 18,
-    backgroundColor: Palette.grey700,
-    borderRadius: 9,
-  },
-  inputBar: {
-    marginHorizontal: 24,
-    marginBottom: 18,
-    backgroundColor: Palette.bgWhite,
-    borderRadius: 999,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    flexDirection: "row",
+  sendButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Palette.primary,
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "center",
   },
-  inputPlaceholder: {
-    ...Typography.bodyMedium,
-    color: Palette.grey600,
+  sendButtonDisabled: {
+    backgroundColor: Palette.grey300,
   },
-  inputMic: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: Palette.black,
+  sendIcon: {
+    width: 14,
+    height: 14,
+    borderTopWidth: 2,
+    borderRightWidth: 2,
+    borderColor: Palette.bgWhite,
+    transform: [{ rotate: "45deg" }, { translateX: -2 }, { translateY: 2 }],
   },
 });

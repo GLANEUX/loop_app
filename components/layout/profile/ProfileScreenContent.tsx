@@ -1,24 +1,29 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ImageBackground,
+  ActivityIndicator,
+  Dimensions,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import BackIcon from "@/assets/icons/icons/arrow-right-outline-white.svg";
+import BackIcon from "@/assets/icons/icons/direction-left-2-outline-white.svg";
+import EditIcon from "@/assets/icons/icons/edit-outline-white.svg";
 import PinIcon from "@/assets/icons/icons/pin-outline-white.svg";
-import SendIcon from "@/assets/icons/icons/direction-right-2-outline-white.svg";
 import { Env } from "@/constants/env";
 import { Palette, Typography } from "@/constants/theme";
 import { formatApiError } from "@/lib/api";
-import { getAccessToken } from "@/lib/session";
+import { getAccessToken, getStoredUser } from "@/lib/session";
 import { getMyProfile, UserMe } from "@/lib/user";
-import * as FileSystem from "expo-file-system/legacy";
 
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const fallbackAvatar = require("@/assets/images/landing/landing-9.jpg");
 
 type ProfileScreenContentProps = {
@@ -26,9 +31,9 @@ type ProfileScreenContentProps = {
   profileId?: string | null;
 };
 
-const formatDate = (value?: string | null) => {
-  if (!value) return null;
-  const parsed = new Date(value);
+const calculateAge = (birthDate?: string | null) => {
+  if (!birthDate) return null;
+  const parsed = new Date(birthDate);
   if (Number.isNaN(parsed.getTime())) return null;
   const now = new Date();
   let age = now.getFullYear() - parsed.getFullYear();
@@ -43,53 +48,75 @@ export default function ProfileScreenContent({
   onBack,
   profileId,
 }: ProfileScreenContentProps) {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [user, setUser] = useState<UserMe | null>(null);
+  const [me, setMe] = useState<{ id: string } | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [avatarLocalUri, setAvatarLocalUri] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAboutExpanded, setIsAboutExpanded] = useState(false);
-  const [isAboutTruncated, setIsAboutTruncated] = useState(false);
+
+  // Détermine si c'est le profil de l'utilisateur connecté
+  const isOwnProfile = useMemo(() => {
+    if (profileId === "me" || !profileId) return true;
+    if (user?.profile?.id === profileId) return true;
+    if (me?.id === profileId) return true;
+    return false;
+  }, [profileId, me, user]);
+
+  const fetchProfileData = useCallback(async () => {
+    setError(null);
+    try {
+      const [sessionToken, storedUser] = await Promise.all([
+        getAccessToken(),
+        getStoredUser(),
+      ]);
+
+      if (!sessionToken) {
+        setError("Tu dois être connecté pour voir ce profil.");
+        setLoading(false);
+        return;
+      }
+
+      setToken(sessionToken);
+      setMe(storedUser);
+
+      // Si c'est notre profil ou qu'on demande "me", on charge nos données
+      if (
+        profileId === "me" ||
+        !profileId ||
+        (storedUser && profileId === storedUser.id)
+      ) {
+        const data = await getMyProfile(sessionToken);
+        setUser(data);
+      } else {
+        // TODO: Charger un profil public via un nouvel endpoint GET /user/profiles/:id
+        // Pour l'instant on réutilise getMyProfile pour éviter de casser l'affichage,
+        // mais à terme il faudra l'endpoint public.
+        const data = await getMyProfile(sessionToken);
+        setUser(data);
+      }
+    } catch (err) {
+      setError(formatApiError(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [profileId]);
 
   useEffect(() => {
-    let isMounted = true;
-    const fetchProfile = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const sessionToken = await getAccessToken();
-        if (!sessionToken) {
-          if (isMounted) {
-            setError("Tu dois être connecté pour voir ce profil.");
-            setLoading(false);
-          }
-          return;
-        }
-        if (isMounted) {
-          setToken(sessionToken);
-        }
+    setLoading(true);
+    fetchProfileData();
+  }, [fetchProfileData]);
 
-        // TODO: remplacer par l'endpoint de profil public quand il sera disponible.
-        const data = await getMyProfile(sessionToken);
-        if (isMounted) {
-          setUser(data);
-        }
-      } catch (err) {
-        if (isMounted) {
-          setError(formatApiError(err));
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+  useFocusEffect(
+    useCallback(() => {
+      // On ne recharge que si on a déjà chargé une fois (évite le double fetch initial)
+      if (!loading && user) {
+        fetchProfileData();
       }
-    };
-
-    fetchProfile();
-    return () => {
-      isMounted = false;
-    };
-  }, [profileId]);
+    }, [fetchProfileData, loading, user])
+  );
 
   const profile = user?.profile;
   const displayName = useMemo(() => {
@@ -98,76 +125,54 @@ export default function ProfileScreenContent({
     return user?.pseudo || "Utilisateur";
   }, [profile?.firstName, profile?.lastName, user?.pseudo]);
 
-  const age = formatDate(profile?.birthDate);
-  const subtitle = profile?.instruments?.[0]?.instrument || "Guitariste";
+  const age = calculateAge(profile?.birthDate);
+  const mainInstrument = profile?.instruments?.[0]?.instrument || "Musicien";
 
-  const avatarUriBase =
-    profile?.hasAvatar === false
-      ? null
-      : profile?.avatarUrl
-        ? profile.avatarUrl
-        : profile?.hasAvatar === true
-          ? `${Env.API_URL}/user/me/avatar`
-          : null;
-  const avatarVersion = profile?.updatedAt || "";
-  const avatarUri =
-    avatarUriBase && avatarVersion
-      ? `${avatarUriBase}?v=${encodeURIComponent(avatarVersion)}`
-      : avatarUriBase;
+  // Logique de récupération de l'image corrigée
+  const avatarSource = useMemo(() => {
+    if (profile?.avatarUrl) return { uri: profile.avatarUrl };
 
-  useEffect(() => {
-    let active = true;
-    const downloadAvatar = async () => {
-      if (!token || !profile?.hasAvatar || !avatarUri) {
-        if (active) setAvatarLocalUri(null);
-        return;
-      }
-      const cacheDir = FileSystem.cacheDirectory;
-      if (!cacheDir) return;
-      const safeVersion = avatarVersion
-        ? encodeURIComponent(avatarVersion)
-        : "latest";
-      const fileUri = `${cacheDir}avatar-${user?.id ?? "me"}-${safeVersion}.img`;
+    if (profile?.hasAvatar) {
+      // Pour l'utilisateur actuel, on utilise l'endpoint dédié "me"
+      // Pour les autres, on utilise l'endpoint public avec l'ID du profil
+      const endpoint = isOwnProfile
+        ? `${Env.API_URL}/user/me/avatar`
+        : `${Env.API_URL}/user/profiles/${profileId}/avatar`;
 
-      try {
-        const info = await FileSystem.getInfoAsync(fileUri);
-        if (info.exists) {
-          if (active) setAvatarLocalUri(fileUri);
-          return;
-        }
-        const result = await FileSystem.downloadAsync(avatarUri, fileUri, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (active && result?.uri) {
-          setAvatarLocalUri(result.uri);
-        }
-      } catch {
-        if (active) setAvatarLocalUri(null);
-      }
-    };
-    downloadAvatar();
-    return () => {
-      active = false;
-    };
-  }, [token, profile?.hasAvatar, avatarUri, avatarVersion, user?.id]);
+      // Ajout d'un cache breaker basé sur updatedAt pour forcer le rafraîchissement
+      const cacheBreaker = profile.updatedAt
+        ? `?v=${new Date(profile.updatedAt).getTime()}`
+        : "";
 
-  const avatarSource = avatarLocalUri
-    ? { uri: avatarLocalUri }
-    : avatarUri && token
-      ? { uri: avatarUri, headers: { Authorization: `Bearer ${token}` } }
-      : avatarUri
-        ? { uri: avatarUri }
-        : fallbackAvatar;
+      return {
+        uri: `${endpoint}${cacheBreaker}`,
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      };
+    }
 
-  const instruments = (profile?.instruments ?? [])
-    .map((item) =>
-      item.level ? `${item.instrument} · ${item.level}` : item.instrument,
-    )
-    .filter(Boolean);
+    return fallbackAvatar;
+  }, [profile, isOwnProfile, profileId, token]);
 
-  const stylesMusicaux = (profile?.genres ?? []).filter(Boolean);
+  const instruments = useMemo(
+    () =>
+      (profile?.instruments ?? []).map((item) =>
+        item.level ? `${item.instrument} · ${item.level}` : item.instrument,
+      ),
+    [profile?.instruments],
+  );
+
+  const genres = useMemo(
+    () => (profile?.genres ?? []).filter(Boolean),
+    [profile?.genres],
+  );
+
+  if (loading && !user) {
+    return (
+      <View style={[styles.safeArea, styles.centered]}>
+        <ActivityIndicator size="large" color={Palette.primary} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.safeArea}>
@@ -175,274 +180,294 @@ export default function ProfileScreenContent({
         style={styles.container}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
+        bounces={false}
       >
-        <ImageBackground source={avatarSource} style={styles.hero}>
-          <SafeAreaView>
-            <TouchableOpacity style={styles.backButton} onPress={onBack}>
-              <BackIcon
-                width={22}
-                height={22}
-                style={{ transform: [{ scaleX: -1 }] }}
-              />
-            </TouchableOpacity>
-          </SafeAreaView>
-        </ImageBackground>
+        <View style={styles.heroSection}>
+          <Image
+            source={avatarSource}
+            style={styles.heroImage}
+            contentFit="cover"
+            transition={400}
+            cachePolicy="memory-disk"
+          />
+          <LinearGradient
+            colors={["rgba(1,12,19,0.3)", "transparent", Palette.bgBlack]}
+            style={StyleSheet.absoluteFill}
+          />
 
-        <View style={styles.body}>
-          <View style={styles.titleRow}>
-            <View style={styles.titleBlock}>
-              <Text style={styles.title}>
+                    <View style={[styles.headerActions, { top: insets.top + 12 }]}>
+                      <TouchableOpacity style={styles.iconButton} onPress={onBack}>
+                        <BackIcon width={24} height={24} style={{ transform: [{ scaleX: -1 }] }} />
+                      </TouchableOpacity>
+                      
+                      {isOwnProfile && (
+                        <TouchableOpacity 
+                          style={styles.iconButton} 
+                          onPress={() => router.push("/(settings)/profile-edit")}
+                        >
+                          <EditIcon width={24} height={24} />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                    <View style={styles.heroInfo}>
+            <View style={styles.nameBlock}>
+              <Text style={styles.nameText}>
                 {displayName}
                 {age ? `, ${age}` : ""}
               </Text>
-              <Text style={styles.subtitle}>{subtitle}</Text>
             </View>
-            <TouchableOpacity style={styles.sendButton} activeOpacity={0.85}>
-              <SendIcon width={20} height={20} />
+
+            <View style={styles.locationRow}>
+              <PinIcon width={14} height={14} color={Palette.grey300} />
+              <Text style={styles.locationText}>Paris, France</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.contentBody}>
+          {!isOwnProfile && (
+            <TouchableOpacity style={styles.primaryButton} activeOpacity={0.9}>
+              <Text style={styles.primaryButtonText}>Envoyer un message</Text>
             </TouchableOpacity>
-          </View>
+          )}
 
-          <View style={styles.locationRow}>
-            <View>
-              <Text style={styles.sectionTitle}>Localisation</Text>
-              <Text style={styles.sectionValue}>Paris</Text>
-            </View>
-            <View style={styles.distancePill}>
-              <PinIcon width={16} height={16} />
-              <Text style={styles.distanceText}>1 km</Text>
-            </View>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>A propos</Text>
+          <View style={styles.infoCard}>
+            <Text style={styles.sectionHeader}>À propos</Text>
             <Text
-              style={styles.aboutText}
-              numberOfLines={isAboutExpanded ? undefined : 4}
-              onTextLayout={(event) => {
-                if (isAboutExpanded) return;
-                const hasMore = event.nativeEvent.lines.length > 4;
-                if (hasMore !== isAboutTruncated) {
-                  setIsAboutTruncated(hasMore);
-                }
-              }}
+              style={styles.bioText}
+              numberOfLines={isAboutExpanded ? undefined : 5}
             >
               {profile?.bio?.trim().length
                 ? profile.bio
-                : "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."}
+                : "Ce musicien n'a pas encore rédigé sa biographie. Sa musique s'en chargera."}
             </Text>
-            {profile?.bio?.trim().length && (isAboutTruncated || isAboutExpanded) ? (
+            {profile?.bio && profile.bio.length > 180 && (
               <TouchableOpacity
                 onPress={() => setIsAboutExpanded((prev) => !prev)}
+                style={styles.expandButton}
               >
-                <Text style={styles.readMore}>
-                  {isAboutExpanded ? "Lire moins." : "Lire plus."}
+                <Text style={styles.expandButtonText}>
+                  {isAboutExpanded ? "Réduire" : "Lire la suite"}
                 </Text>
               </TouchableOpacity>
-            ) : (
-              <Text style={styles.readMore}>Lire plus.</Text>
             )}
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Instruments</Text>
-            <View style={styles.chipsRow}>
-              {(instruments.length ? instruments : ["Guitare", "Piano", "Chant"]).map(
-                (label) => (
-                  <Chip key={label} label={label} />
-                ),
-              )}
+          {instruments.length > 0 && (
+            <View style={styles.infoCard}>
+              <Text style={styles.sectionHeader}>Instruments</Text>
+              <View style={styles.tagGrid}>
+                {instruments.map((label) => (
+                  <View key={label} style={styles.tag}>
+                    <Text style={styles.tagText}>{label}</Text>
+                  </View>
+                ))}
+              </View>
             </View>
-          </View>
+          )}
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Styles musicaux</Text>
-            <View style={styles.chipsRow}>
-              {(stylesMusicaux.length ? stylesMusicaux : ["Jazz", "Blues"]).map(
-                (label) => (
-                  <Chip key={label} label={label} />
-                ),
-              )}
+          {genres.length > 0 && (
+            <View style={styles.infoCard}>
+              <Text style={styles.sectionHeader}>Styles musicaux</Text>
+              <View style={styles.tagGrid}>
+                {genres.map((label) => (
+                  <View key={label} style={[styles.tag, styles.tagSecondary]}>
+                    <Text style={[styles.tagText, styles.tagTextSecondary]}>
+                      {label}
+                    </Text>
+                  </View>
+                ))}
+              </View>
             </View>
-          </View>
+          )}
 
-          <View style={[styles.section, { marginBottom: 40 }]}>
-            <Text style={styles.sectionTitle}>Projets en ligne</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.projectsRow}
-            >
-              <View style={styles.projectCard}>
-                <View style={styles.projectPlay} />
-              </View>
-              <View style={styles.projectCard}>
-                <View style={styles.projectPlay} />
-              </View>
-              <View style={styles.projectCard}>
-                <View style={styles.projectPlay} />
-              </View>
-            </ScrollView>
-          </View>
-
-          {loading && <Text style={styles.statusText}>Chargement...</Text>}
-          {error && <Text style={styles.errorText}>{error}</Text>}
+          <View style={styles.footerSpacer} />
         </View>
       </ScrollView>
+
+      {error && (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
     </View>
   );
 }
-
-const Chip: React.FC<{ label: string }> = ({ label }) => (
-  <View style={styles.chip}>
-    <Text style={styles.chipText}>{label}</Text>
-  </View>
-);
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: Palette.bgBlack,
   },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   container: {
     flex: 1,
   },
   contentContainer: {
-    paddingBottom: 140,
+    flexGrow: 1,
   },
-  hero: {
-    height: 420,
-    justifyContent: "flex-start",
+  heroSection: {
+    height: SCREEN_HEIGHT * 0.6,
+    width: SCREEN_WIDTH,
+    justifyContent: "flex-end",
   },
-  backButton: {
-    marginTop: 8,
-    marginLeft: 18,
-    width: 32,
-    height: 32,
+  heroImage: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  headerActions: {
+    position: "absolute",
+    left: 20,
+    right: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    zIndex: 10,
+  },
+  iconButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(1,12,19,0.4)",
     justifyContent: "center",
-    alignItems: "flex-start",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.15)",
   },
-  body: {
-    marginTop: -22,
-    borderTopWidth: 2,
-    borderTopColor: Palette.primary,
-    backgroundColor: Palette.bgBlack,
-    borderTopLeftRadius: 26,
-    borderTopRightRadius: 26,
+  heroInfo: {
     paddingHorizontal: 24,
-    paddingTop: 20,
+    paddingBottom: 24,
   },
-  titleRow: {
+  nameBlock: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-  },
-  titleBlock: {
-    flex: 1,
-    paddingRight: 12,
-  },
-  title: {
-    ...Typography.title1Bold,
-    color: Palette.bgWhite,
-  },
-  subtitle: {
-    marginTop: 6,
-    ...Typography.bodyMedium,
-    color: Palette.grey300,
-  },
-  sendButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 20,
-    backgroundColor: "#D1D5DB",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  locationRow: {
-    marginTop: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  section: {
-    marginTop: 24,
-  },
-  sectionTitle: {
-    ...Typography.title3Bold,
-    color: Palette.bgWhite,
-  },
-  sectionValue: {
-    marginTop: 6,
-    ...Typography.bodyMedium,
-    color: Palette.grey300,
-  },
-  distancePill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "#1D2329",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-  },
-  distanceText: {
-    ...Typography.bodyMedium,
-    color: Palette.bgWhite,
-  },
-  aboutText: {
-    marginTop: 10,
-    ...Typography.bodyMedium,
-    color: Palette.grey200,
-    lineHeight: 22,
-  },
-  readMore: {
-    marginTop: 8,
-    ...Typography.bodyBold,
-    color: Palette.bgWhite,
-  },
-  chipsRow: {
-    marginTop: 14,
-    flexDirection: "row",
     flexWrap: "wrap",
     gap: 12,
   },
-  chip: {
-    backgroundColor: Palette.bgWhite,
-    borderRadius: 999,
-    paddingHorizontal: 18,
-    paddingVertical: 8,
+  nameText: {
+    ...Typography.largeTitleBold,
+    color: Palette.bgWhite,
+    fontSize: 34,
   },
-  chipText: {
-    ...Typography.bodyMedium,
-    color: Palette.grey800,
+  instrumentBadge: {
+    backgroundColor: Palette.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
-  projectsRow: {
-    marginTop: 16,
-    gap: 12,
-    paddingRight: 12,
+  instrumentBadgeText: {
+    ...Typography.smallSemibold,
+    color: Palette.bgWhite,
+    fontSize: 12,
+    textTransform: "uppercase",
   },
-  projectCard: {
-    width: 130,
-    height: 130,
+  locationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+    gap: 6,
+  },
+  locationText: {
+    ...Typography.bodyRegular,
+    color: Palette.grey300,
+    fontSize: 15,
+  },
+  contentBody: {
+    backgroundColor: Palette.bgBlack,
+    paddingHorizontal: 24,
+    paddingTop: 8,
+  },
+  primaryButton: {
+    backgroundColor: Palette.primary,
+    paddingVertical: 18,
     borderRadius: 16,
-    backgroundColor: "#0B0F14",
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: 32,
+    shadowColor: Palette.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  projectPlay: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Palette.bgWhite,
+  primaryButtonText: {
+    ...Typography.bodyBold,
+    color: Palette.bgWhite,
+    fontSize: 17,
+  },
+  infoCard: {
+    marginBottom: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
+    padding: 20,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.06)",
+  },
+  sectionHeader: {
+    ...Typography.bodyBold,
+    color: Palette.bgWhite,
+    marginBottom: 12,
+    fontSize: 17,
+    textTransform: "uppercase",
+    letterSpacing: 1,
     opacity: 0.9,
   },
-  statusText: {
-    marginTop: 20,
-    ...Typography.bodyMedium,
+  bioText: {
+    ...Typography.bodyRegular,
     color: Palette.grey300,
+    lineHeight: 24,
+    fontSize: 15,
+  },
+  expandButton: {
+    marginTop: 10,
+  },
+  expandButtonText: {
+    ...Typography.bodyBold,
+    color: Palette.primary50,
+    fontSize: 15,
+  },
+  tagGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  tag: {
+    backgroundColor: "rgba(221, 96, 49, 0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(221, 96, 49, 0.3)",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 14,
+  },
+  tagSecondary: {
+    backgroundColor: "rgba(255, 255, 255, 0.06)",
+    borderColor: "rgba(255, 255, 255, 0.12)",
+  },
+  tagText: {
+    ...Typography.bodyMedium,
+    color: Palette.primary50,
+    fontSize: 14,
+  },
+  tagTextSecondary: {
+    color: Palette.grey200,
+  },
+  footerSpacer: {
+    height: 100,
+  },
+  errorBanner: {
+    position: "absolute",
+    bottom: 40,
+    left: 20,
+    right: 20,
+    backgroundColor: "rgba(238, 40, 59, 0.9)",
+    padding: 16,
+    borderRadius: 12,
   },
   errorText: {
-    marginTop: 10,
     ...Typography.bodyMedium,
-    color: Palette.primary,
+    color: Palette.bgWhite,
+    textAlign: "center",
   },
 });

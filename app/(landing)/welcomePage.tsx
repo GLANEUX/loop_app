@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
-import { Animated, Easing, Image, StyleSheet, Text, View } from "react-native";
+import { Animated, Easing, StyleSheet, Text, View } from "react-native";
+import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Palette, Typography } from "@/constants/theme";
@@ -47,7 +48,8 @@ export default function WelcomePage() {
         <Image
           source={require("@/assets/images/logo/logo-loop-white.png")}
           style={styles.logo}
-          resizeMode="contain"
+          contentFit="contain"
+          transition={300}
         />
 
         <Text style={styles.title}>

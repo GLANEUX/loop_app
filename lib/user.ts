@@ -20,6 +20,7 @@ export type ProfileUpdateInput = {
 export type UserProfile = {
   id: string;
   userId: string;
+  pseudo?: string | null;
   firstName?: string | null;
   lastName?: string | null;
   phoneNumber?: string | null;
