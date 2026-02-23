@@ -17,12 +17,12 @@ import { ButtonLoop } from "@/components/ui";
 import { Palette, Typography } from "@/constants/theme";
 import { formatApiError } from "@/lib/api";
 import { getAccessToken } from "@/lib/session";
-import { getMyProfileCached, updateMyEmail } from "@/lib/user";
+import { getMyProfileCached, updateMyProfile } from "@/lib/user";
 
-export default function InformationEmailScreen() {
+export default function ProfileBioScreen() {
   const insets = useSafeAreaInsets();
-  const [email, setEmail] = useState("");
-  const [initialEmail, setInitialEmail] = useState("");
+  const [bio, setBio] = useState("");
+  const [initialBio, setInitialBio] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -35,9 +35,9 @@ export default function InformationEmailScreen() {
         if (!token) return;
         const me = await getMyProfileCached(token);
         if (active) {
-          const currentEmail = me.email || "";
-          setEmail(currentEmail);
-          setInitialEmail(currentEmail);
+          const currentBio = me.profile?.bio || "";
+          setBio(currentBio);
+          setInitialBio(currentBio);
         }
       } catch {
         // ignore prefill error
@@ -49,27 +49,13 @@ export default function InformationEmailScreen() {
     };
   }, []);
 
-  const validateEmail = (email: string) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  };
-
-  const isChanged = email.trim().toLowerCase() !== initialEmail.trim().toLowerCase();
+  const isChanged = bio.trim() !== initialBio.trim();
 
   const handleSave = async () => {
     setError(null);
     setSuccess(null);
 
-    const normalized = email.trim().toLowerCase();
-    
-    if (!normalized) {
-      setError("Veuillez renseigner votre e-mail.");
-      return;
-    }
-    
-    if (!validateEmail(normalized)) {
-      setError("Veuillez entrer une adresse e-mail valide.");
-      return;
-    }
+    const normalized = bio.trim();
 
     setLoading(true);
     try {
@@ -80,10 +66,10 @@ export default function InformationEmailScreen() {
         return;
       }
       
-      await updateMyEmail(normalized, token);
+      await updateMyProfile({ bio: normalized || null }, token);
       
-      setSuccess("E-mail mis à jour avec succès.");
-      setInitialEmail(normalized); // Update initial email to disable button again
+      setSuccess("Biographie mise à jour avec succès.");
+      setInitialBio(normalized);
     } catch (err) {
       setError(formatApiError(err));
     } finally {
@@ -112,29 +98,30 @@ export default function InformationEmailScreen() {
                 style={{ transform: [{ scaleX: -1 }] }}
               />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Modifier l'e-mail</Text>
+            <Text style={styles.headerTitle}>Modifier la biographie</Text>
           </View>
 
           <View style={styles.infoSection}>
             <Text style={styles.description}>
-              Votre adresse e-mail est utilisée pour vous connecter et pour les communications importantes concernant votre compte.
+              Dites aux autres musiciens qui vous êtes, vos influences et ce que vous recherchez.
             </Text>
           </View>
 
           <View style={styles.card}>
             <View style={styles.inputWrapper}>
-              <Text style={styles.inputLabel}>Nouvelle adresse e-mail</Text>
+              <Text style={styles.inputLabel}>Ma biographie</Text>
               <TextInput
                 style={styles.input}
-                value={email}
+                value={bio}
                 onChangeText={(text) => {
-                  setEmail(text);
+                  setBio(text);
                   if (error) setError(null);
                 }}
-                placeholder="mail@exemple.com"
+                placeholder="Je joue de la basse depuis 10 ans..."
                 placeholderTextColor={Palette.grey600}
-                keyboardType="email-address"
-                autoCapitalize="none"
+                multiline
+                numberOfLines={6}
+                textAlignVertical="top"
                 autoFocus
               />
             </View>
@@ -204,7 +191,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     paddingHorizontal: 4,
   },
- description: {
+  description: {
     ...Typography.bodyRegular,
     color: Palette.grey300,
     lineHeight: 22,
@@ -231,8 +218,7 @@ const styles = StyleSheet.create({
     color: Palette.bgWhite,
     fontSize: 16,
     paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 255, 255, 0.1)",
+    minHeight: 120,
   },
   feedbackContainer: {
     marginTop: 16,

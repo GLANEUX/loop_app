@@ -17,12 +17,12 @@ import { ButtonLoop } from "@/components/ui";
 import { Palette, Typography } from "@/constants/theme";
 import { formatApiError } from "@/lib/api";
 import { getAccessToken } from "@/lib/session";
-import { getMyProfileCached, updateMyEmail } from "@/lib/user";
+import { getMyProfileCached, updateMyPseudo } from "@/lib/user";
 
-export default function InformationEmailScreen() {
+export default function ProfilePseudoScreen() {
   const insets = useSafeAreaInsets();
-  const [email, setEmail] = useState("");
-  const [initialEmail, setInitialEmail] = useState("");
+  const [pseudo, setPseudo] = useState("");
+  const [initialPseudo, setInitialPseudo] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -35,9 +35,9 @@ export default function InformationEmailScreen() {
         if (!token) return;
         const me = await getMyProfileCached(token);
         if (active) {
-          const currentEmail = me.email || "";
-          setEmail(currentEmail);
-          setInitialEmail(currentEmail);
+          const currentPseudo = me.pseudo || "";
+          setPseudo(currentPseudo);
+          setInitialPseudo(currentPseudo);
         }
       } catch {
         // ignore prefill error
@@ -49,25 +49,16 @@ export default function InformationEmailScreen() {
     };
   }, []);
 
-  const validateEmail = (email: string) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  };
-
-  const isChanged = email.trim().toLowerCase() !== initialEmail.trim().toLowerCase();
+  const isChanged = pseudo.trim() !== initialPseudo.trim();
 
   const handleSave = async () => {
     setError(null);
     setSuccess(null);
 
-    const normalized = email.trim().toLowerCase();
+    const normalized = pseudo.trim();
     
     if (!normalized) {
-      setError("Veuillez renseigner votre e-mail.");
-      return;
-    }
-    
-    if (!validateEmail(normalized)) {
-      setError("Veuillez entrer une adresse e-mail valide.");
+      setError("Veuillez renseigner votre pseudo.");
       return;
     }
 
@@ -80,10 +71,10 @@ export default function InformationEmailScreen() {
         return;
       }
       
-      await updateMyEmail(normalized, token);
+      await updateMyPseudo(normalized, token);
       
-      setSuccess("E-mail mis à jour avec succès.");
-      setInitialEmail(normalized); // Update initial email to disable button again
+      setSuccess("Pseudo mis à jour avec succès.");
+      setInitialPseudo(normalized);
     } catch (err) {
       setError(formatApiError(err));
     } finally {
@@ -112,28 +103,27 @@ export default function InformationEmailScreen() {
                 style={{ transform: [{ scaleX: -1 }] }}
               />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Modifier l'e-mail</Text>
+            <Text style={styles.headerTitle}>Modifier le pseudo</Text>
           </View>
 
           <View style={styles.infoSection}>
             <Text style={styles.description}>
-              Votre adresse e-mail est utilisée pour vous connecter et pour les communications importantes concernant votre compte.
+              Votre pseudo est votre identité sur Loop. Choisissez-le bien !
             </Text>
           </View>
 
           <View style={styles.card}>
             <View style={styles.inputWrapper}>
-              <Text style={styles.inputLabel}>Nouvelle adresse e-mail</Text>
+              <Text style={styles.inputLabel}>Nouveau pseudo</Text>
               <TextInput
                 style={styles.input}
-                value={email}
+                value={pseudo}
                 onChangeText={(text) => {
-                  setEmail(text);
+                  setPseudo(text);
                   if (error) setError(null);
                 }}
-                placeholder="mail@exemple.com"
+                placeholder="MonPseudo"
                 placeholderTextColor={Palette.grey600}
-                keyboardType="email-address"
                 autoCapitalize="none"
                 autoFocus
               />
@@ -204,7 +194,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     paddingHorizontal: 4,
   },
- description: {
+  description: {
     ...Typography.bodyRegular,
     color: Palette.grey300,
     lineHeight: 22,

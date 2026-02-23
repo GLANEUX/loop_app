@@ -1,7 +1,8 @@
 // app/(tabs)/profile-settings.tsx (par ex.)
 
+import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Image,
@@ -24,7 +25,6 @@ import * as FileSystem from "expo-file-system/legacy";
 import RightChevronIcon from "@/assets/icons/icons/direction-right-2-outline-white.svg";
 import EyeIcon from "@/assets/icons/icons/eye-1.svg";
 import InfoIcon from "@/assets/icons/icons/information-circle-outline-white.svg";
-import BellIcon from "@/assets/icons/icons/notification-2-outline-white.svg";
 import UserIcon from "@/assets/icons/icons/user-outline-white.svg";
 import { ButtonLoop } from "@/components/ui";
 
@@ -78,32 +78,30 @@ export const ProfileSettingsScreen: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    let active = true;
-    const fetchProfile = async () => {
-      setLoadingProfile(true);
-      setProfileError(null);
-      try {
-        const token = await getAccessToken();
-        if (!token) {
-          if (active) setLoadingProfile(false);
-          return;
-        }
-        if (active) setToken(token);
-        const data = await getMyProfileCached(token);
-        if (active) setUser(data);
-      } catch (err) {
-        if (active) setProfileError(formatApiError(err));
-      } finally {
-        if (active) setLoadingProfile(false);
+  const fetchProfile = useCallback(async () => {
+    setLoadingProfile(true);
+    setProfileError(null);
+    try {
+      const token = await getAccessToken();
+      if (!token) {
+        setLoadingProfile(false);
+        return;
       }
-    };
-
-    fetchProfile();
-    return () => {
-      active = false;
-    };
+      setToken(token);
+      const data = await getMyProfileCached(token, true);
+      setUser(data);
+    } catch (err) {
+      setProfileError(formatApiError(err));
+    } finally {
+      setLoadingProfile(false);
+    }
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchProfile();
+    }, [fetchProfile]),
+  );
 
   const profile = user?.profile;
   const displayName = useMemo(() => {
@@ -216,17 +214,17 @@ export const ProfileSettingsScreen: React.FC = () => {
             Icon={UserIcon}
             onPress={() => router.push("/(settings)/profile-edit")}
           />
-          <SettingsRow
+          {/* TODO: <SettingsRow
             label="Notifications"
             Icon={BellIcon}
             onPress={() => router.push("/(settings)/notifications")}
-          />
+          /> */}
           {/* <SettingsRow label="Gérer mon abonnement" Icon={PlayIcon} /> */}
         </View>
-        <View style={styles.rowsGroupSecondary}>
+        {/* TODO: <View style={styles.rowsGroupSecondary}>
           <SettingsRow label="Aide et support" />
           <SettingsRow label="Conditions d’utilisation" />
-        </View>
+        </View> */}
         {/* TODO: Add onPress handlers */}
         <ButtonLoop
           label="Se déconnecter"

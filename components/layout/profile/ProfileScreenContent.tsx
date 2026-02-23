@@ -104,18 +104,10 @@ export default function ProfileScreenContent({
     }
   }, [profileId]);
 
-  useEffect(() => {
-    setLoading(true);
-    fetchProfileData();
-  }, [fetchProfileData]);
-
   useFocusEffect(
     useCallback(() => {
-      // On ne recharge que si on a déjà chargé une fois (évite le double fetch initial)
-      if (!loading && user) {
-        fetchProfileData();
-      }
-    }, [fetchProfileData, loading, user])
+      fetchProfileData();
+    }, [fetchProfileData])
   );
 
   const profile = user?.profile;

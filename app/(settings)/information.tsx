@@ -1,24 +1,26 @@
+import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
-import BackIcon from "@/assets/icons/icons/arrow-right-outline-white.svg";
+import BackIcon from "@/assets/icons/icons/direction-left-2-outline-white.svg";
 import ChevronRightIcon from "@/assets/icons/icons/direction-right-2-outline-white.svg";
-import { ButtonLoop } from "@/components/ui";
 import { Palette, Typography } from "@/constants/theme";
 import { formatApiError } from "@/lib/api";
 import { getAccessToken } from "@/lib/session";
-import { getMyProfileCached, updateMyPassword, UserMe } from "@/lib/user";
+import { getMyProfileCached, UserMe } from "@/lib/user";
 
 export default function InformationScreen() {
   const insets = useSafeAreaInsets();
@@ -26,77 +28,31 @@ export default function InformationScreen() {
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [profileError, setProfileError] = useState<string | null>(null);
 
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [savingPassword, setSavingPassword] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    const fetchProfile = async () => {
-      setLoadingProfile(true);
-      setProfileError(null);
-      try {
-        const token = await getAccessToken();
-        if (!token) {
-          if (active) setLoadingProfile(false);
-          return;
-        }
-        const data = await getMyProfileCached(token);
-        if (active) setUser(data);
-      } catch (err) {
-        if (active) setProfileError(formatApiError(err));
-      } finally {
-        if (active) setLoadingProfile(false);
-      }
-    };
-
-    fetchProfile();
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const email = user?.email || "johndoe21@gmail.com";
-  const phone = user?.profile?.phoneNumber || "+33678439376";
-
-  const handleSavePassword = async () => {
-    setSubmitError(null);
-    setSubmitSuccess(null);
-
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      setSubmitError("Remplis les 3 champs mot de passe.");
-      return;
-    }
-    if (newPassword.length < 6) {
-      setSubmitError("Le nouveau mot de passe doit contenir au moins 6 caracteres.");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setSubmitError("La confirmation ne correspond pas.");
-      return;
-    }
-
-    setSavingPassword(true);
+  const fetchProfile = useCallback(async (force = false) => {
+    setProfileError(null);
     try {
       const token = await getAccessToken();
       if (!token) {
-        setSubmitError("Tu dois etre connecte pour continuer.");
+        setLoadingProfile(false);
         return;
       }
-      await updateMyPassword(currentPassword, newPassword, token);
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      setSubmitSuccess("Mot de passe mis a jour.");
+      const data = await getMyProfileCached(token, force);
+      setUser(data);
     } catch (err) {
-      setSubmitError(formatApiError(err));
+      setProfileError(formatApiError(err));
     } finally {
-      setSavingPassword(false);
+      setLoadingProfile(false);
     }
-  };
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchProfile(true);
+    }, [fetchProfile]),
+  );
+
+  const email = user?.email || "chargement...";
+  const phone = user?.profile?.phoneNumber || "Non renseigné";
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -115,77 +71,60 @@ export default function InformationScreen() {
           <View style={styles.header}>
             <TouchableOpacity style={styles.backButton} onPress={router.back}>
               <BackIcon
-                width={22}
-                height={22}
+                width={24}
+                height={24}
                 style={{ transform: [{ scaleX: -1 }] }}
               />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Informations</Text>
           </View>
 
-          {loadingProfile && <Text style={styles.statusText}>Chargement...</Text>}
-          {profileError && <Text style={styles.errorText}>{profileError}</Text>}
+          {profileError && (
+            <View style={styles.errorBanner}>
+              <Text style={styles.errorText}>{profileError}</Text>
+            </View>
+          )}
 
-          <View style={styles.formCard}>
-            <InfoRow
-              label="E-mail"
-              value={email}
-              onPress={() => router.push("/(settings)/information-email")}
-            />
-            <InfoRow
-              label="Telephone"
-              value={phone}
-              onPress={() => router.push("/(settings)/information-phone")}
-            />
-            <EditableRow label="Mot de passe actuel">
-              <TextInput
-                style={styles.input}
-                value={currentPassword}
-                onChangeText={setCurrentPassword}
-                placeholder="••••••"
-                placeholderTextColor={Palette.grey600}
-                secureTextEntry
+          <View style={styles.section}>
+            <Text style={styles.sectionHeader}>Compte</Text>
+            <View style={styles.card}>
+              <InfoRow
+                label="E-mail"
+                value={email}
+                onPress={() => router.push("/(settings)/information-email")}
               />
-            </EditableRow>
-            <EditableRow label="Nouveau mot de passe">
-              <TextInput
-                style={styles.input}
-                value={newPassword}
-                onChangeText={setNewPassword}
-                placeholder="Inserez..."
-                placeholderTextColor={Palette.grey600}
-                secureTextEntry
+              <InfoRow
+                label="Téléphone"
+                value={phone}
+                onPress={() => router.push("/(settings)/information-phone")}
+                isLast
               />
-            </EditableRow>
-            <EditableRow label="Confirmez" isLast>
-              <TextInput
-                style={styles.input}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                placeholder="Inserez..."
-                placeholderTextColor={Palette.grey600}
-                secureTextEntry
-              />
-            </EditableRow>
+            </View>
           </View>
 
-          {!!submitError && <Text style={styles.errorText}>{submitError}</Text>}
-          {!!submitSuccess && <Text style={styles.successText}>{submitSuccess}</Text>}
+          <View style={styles.section}>
+            <Text style={styles.sectionHeader}>Sécurité</Text>
+            <View style={styles.card}>
+              <InfoRow
+                label="Changement de mot de passe"
+                value=""
+                onPress={() => router.push("/(settings)/information-password")}
+                isLast
+              />
+            </View>
+          </View>
 
-          <ButtonLoop
-            label="Enregistrer"
-            onPress={handleSavePassword}
-            loading={savingPassword}
-            style={styles.save}
-          />
+          <View style={[styles.section, { marginTop: 20 }]}>
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={() => router.push("/(settings)/delete-account")}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.deleteText}>Supprimer mon compte</Text>
+            </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={() => router.push("/(settings)/delete-account")}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.deleteText}>Supprimer mon compte</Text>
-          </TouchableOpacity>
+          <View style={styles.footerSpacer} />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -206,29 +145,20 @@ const InfoRow: React.FC<InfoRowProps> = ({ label, value, onPress, isLast }) => (
     disabled={!onPress}
     activeOpacity={onPress ? 0.75 : 1}
   >
-    <Text style={styles.rowLabel}>{label}</Text>
-    <View style={styles.rowRight}>
-      <Text style={styles.rowValue}>{value}</Text>
-      {onPress && <ChevronRightIcon width={18} height={18} />}
+    <View style={styles.rowLeft}>
+      <Text style={styles.rowLabel}>{label}</Text>
+    </View>
+    <View style={[styles.rowRight, !value && { flex: 0 }]}>
+      {value ? (
+        <Text style={styles.rowValue} numberOfLines={1}>
+          {value}
+        </Text>
+      ) : null}
+      {onPress && (
+        <ChevronRightIcon width={18} height={18} color={Palette.grey600} />
+      )}
     </View>
   </TouchableOpacity>
-);
-
-type EditableRowProps = {
-  label: string;
-  isLast?: boolean;
-  children: React.ReactNode;
-};
-
-const EditableRow: React.FC<EditableRowProps> = ({
-  label,
-  isLast,
-  children,
-}) => (
-  <View style={[styles.row, isLast && styles.rowLast]}>
-    <Text style={styles.rowLabel}>{label}</Text>
-    <View style={styles.rowInputWrap}>{children}</View>
-  </View>
 );
 
 const styles = StyleSheet.create({
@@ -240,54 +170,58 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    paddingHorizontal: 24,
-    paddingBottom: 140,
+    paddingHorizontal: 20,
+    paddingBottom: 60,
   },
   header: {
-    marginTop: 8,
+    paddingVertical: 20,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: 10,
   },
   backButton: {
     position: "absolute",
     left: 0,
-    width: 32,
-    height: 32,
-    alignItems: "flex-start",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
   },
   headerTitle: {
     ...Typography.title2Bold,
     color: Palette.bgWhite,
+    fontSize: 20,
   },
-  statusText: {
-    marginTop: 12,
-    ...Typography.bodyMedium,
-    color: Palette.grey300,
-    textAlign: "center",
+  section: {
+    marginBottom: 24,
   },
-  errorText: {
-    marginTop: 12,
-    ...Typography.bodyMedium,
-    color: Palette.primary,
-    textAlign: "center",
+  sectionHeader: {
+    ...Typography.bodyBold,
+    color: Palette.bgWhite,
+    marginBottom: 12,
+    marginLeft: 4,
+    fontSize: 16,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    opacity: 0.7,
   },
-  successText: {
-    marginTop: 12,
-    ...Typography.bodyMedium,
-    color: Palette.valid,
-    textAlign: "center",
-  },
-  formCard: {
-    marginTop: 30,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
+  card: {
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.06)",
+    overflow: "hidden",
   },
   row: {
     paddingVertical: 18,
+    paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
+    borderColor: "rgba(255,255,255,0.06)",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -296,48 +230,55 @@ const styles = StyleSheet.create({
   rowLast: {
     borderBottomWidth: 0,
   },
+  rowLeft: {
+    flex: 1,
+  },
   rowLabel: {
-    ...Typography.bodyBold,
+    ...Typography.bodyMedium,
     color: Palette.bgWhite,
+    fontSize: 15,
   },
   rowRight: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    maxWidth: "60%",
+    justifyContent: "flex-end",
   },
   rowValue: {
-    ...Typography.bodyMedium,
-    color: Palette.primary,
+    ...Typography.bodyRegular,
+    color: Palette.primary50,
     textAlign: "right",
     flexShrink: 1,
-  },
-  rowInputWrap: {
-    flex: 1,
-    alignItems: "flex-end",
-  },
-  input: {
-    ...Typography.bodyMedium,
-    color: Palette.bgWhite,
-    textAlign: "right",
-    minWidth: 140,
-  },
-  save: {
-    marginTop: 34,
-    alignSelf: "center",
-    paddingHorizontal: 40,
-    backgroundColor: Palette.grey100,
+    fontSize: 15,
   },
   deleteButton: {
-    marginTop: 22,
-    alignSelf: "center",
-    paddingHorizontal: 38,
-    paddingVertical: 14,
-    borderRadius: 999,
-    backgroundColor: "#4A0E14",
+    marginTop: 12,
+    paddingVertical: 16,
+    borderRadius: 16,
+    backgroundColor: "rgba(238, 40, 59, 0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(238, 40, 59, 0.2)",
+    alignItems: "center",
   },
   deleteText: {
     ...Typography.bodyBold,
-    color: "#E53A3A",
+    color: Palette.error,
+    fontSize: 15,
+  },
+  errorBanner: {
+    backgroundColor: "rgba(238, 40, 59, 0.1)",
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "rgba(238, 40, 59, 0.2)",
+  },
+  errorText: {
+    ...Typography.smallLight,
+    color: Palette.error,
+    textAlign: "center",
+  },
+  footerSpacer: {
+    height: 40,
   },
 });

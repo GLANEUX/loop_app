@@ -17,12 +17,12 @@ import { ButtonLoop } from "@/components/ui";
 import { Palette, Typography } from "@/constants/theme";
 import { formatApiError } from "@/lib/api";
 import { getAccessToken } from "@/lib/session";
-import { getMyProfileCached, updateMyEmail } from "@/lib/user";
+import { getMyProfileCached, updateMyProfile } from "@/lib/user";
 
-export default function InformationEmailScreen() {
+export default function ProfileBirthDateScreen() {
   const insets = useSafeAreaInsets();
-  const [email, setEmail] = useState("");
-  const [initialEmail, setInitialEmail] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [initialBirthDate, setInitialBirthDate] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -35,9 +35,14 @@ export default function InformationEmailScreen() {
         if (!token) return;
         const me = await getMyProfileCached(token);
         if (active) {
-          const currentEmail = me.email || "";
-          setEmail(currentEmail);
-          setInitialEmail(currentEmail);
+          const raw = me.profile?.birthDate || "";
+          setInitialBirthDate(raw);
+          if (raw) {
+            const [year, month, day] = raw.split("-");
+            if (year && month && day) {
+              setBirthDate(`${day}/${month}/${year}`);
+            }
+          }
         }
       } catch {
         // ignore prefill error
@@ -49,25 +54,58 @@ export default function InformationEmailScreen() {
     };
   }, []);
 
-  const validateEmail = (email: string) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const handleChange = (value: string) => {
+    const digits = value.replaceAll(/[^\d]/g, "").slice(0, 8);
+    let result = digits;
+    if (digits.length > 4) {
+      result = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+    } else if (digits.length > 2) {
+      result = `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    }
+    setBirthDate(result);
+    if (error) setError(null);
   };
-
-  const isChanged = email.trim().toLowerCase() !== initialEmail.trim().toLowerCase();
 
   const handleSave = async () => {
     setError(null);
     setSuccess(null);
 
-    const normalized = email.trim().toLowerCase();
-    
-    if (!normalized) {
-      setError("Veuillez renseigner votre e-mail.");
+    const digits = birthDate.replaceAll(/[^\d]/g, "");
+    if (digits.length !== 8) {
+      setError("Entre une date au format JJ/MM/AAAA.");
       return;
     }
-    
-    if (!validateEmail(normalized)) {
-      setError("Veuillez entrer une adresse e-mail valide.");
+
+    const day = parseInt(digits.slice(0, 2), 10);
+    const month = parseInt(digits.slice(2, 4), 10) - 1;
+    const year = parseInt(digits.slice(4), 10);
+    const date = new Date(year, month, day);
+
+    if (
+      Number.isNaN(date.getTime()) ||
+      date.getDate() !== day ||
+      date.getMonth() !== month ||
+      date.getFullYear() !== year
+    ) {
+      setError("Cette date n'est pas valide.");
+      return;
+    }
+
+    const today = new Date();
+    let age = today.getFullYear() - year;
+    const hasHadBirthdayThisYear =
+      today.getMonth() > month ||
+      (today.getMonth() === month && today.getDate() >= day);
+    if (!hasHadBirthdayThisYear) age -= 1;
+
+    if (age < 18) {
+      setError("Tu dois avoir au moins 18 ans.");
+      return;
+    }
+
+    const isoDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    if (isoDate === initialBirthDate) {
+      router.back();
       return;
     }
 
@@ -80,10 +118,9 @@ export default function InformationEmailScreen() {
         return;
       }
       
-      await updateMyEmail(normalized, token);
-      
-      setSuccess("E-mail mis à jour avec succès.");
-      setInitialEmail(normalized); // Update initial email to disable button again
+      await updateMyProfile({ birthDate: isoDate }, token);
+      setSuccess("Date de naissance mise à jour.");
+      setInitialBirthDate(isoDate);
     } catch (err) {
       setError(formatApiError(err));
     } finally {
@@ -112,32 +149,26 @@ export default function InformationEmailScreen() {
                 style={{ transform: [{ scaleX: -1 }] }}
               />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Modifier l'e-mail</Text>
+            <Text style={styles.headerTitle}>Date de naissance</Text>
           </View>
 
           <View style={styles.infoSection}>
             <Text style={styles.description}>
-              Votre adresse e-mail est utilisée pour vous connecter et pour les communications importantes concernant votre compte.
+              Votre âge est affiché sur votre profil pour aider les musiciens à trouver des partenaires de leur génération.
             </Text>
           </View>
 
-          <View style={styles.card}>
-            <View style={styles.inputWrapper}>
-              <Text style={styles.inputLabel}>Nouvelle adresse e-mail</Text>
-              <TextInput
-                style={styles.input}
-                value={email}
-                onChangeText={(text) => {
-                  setEmail(text);
-                  if (error) setError(null);
-                }}
-                placeholder="mail@exemple.com"
-                placeholderTextColor={Palette.grey600}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoFocus
-              />
-            </View>
+          <View style={styles.onboardingInputWrapper}>
+            <TextInput
+              style={[styles.onboardingInput, error && styles.inputError]}
+              keyboardType="number-pad"
+              placeholder="JJ/MM/AAAA"
+              placeholderTextColor="rgba(255,255,255,0.4)"
+              value={birthDate}
+              onChangeText={handleChange}
+              autoFocus
+            />
+            <View style={[styles.underline, error && styles.underlineError]} />
           </View>
 
           {!!error && (
@@ -156,7 +187,7 @@ export default function InformationEmailScreen() {
             onPress={handleSave}
             loading={loading}
             style={styles.saveButton}
-            disabled={!isChanged || loading || !!success}
+            disabled={loading || !!success}
           />
         </ScrollView>
       </KeyboardAvoidingView>
@@ -204,35 +235,35 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     paddingHorizontal: 4,
   },
- description: {
+  description: {
     ...Typography.bodyRegular,
     color: Palette.grey300,
     lineHeight: 22,
     fontSize: 15,
   },
-  card: {
-    backgroundColor: "rgba(255, 255, 255, 0.04)",
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.06)",
-    padding: 20,
+  onboardingInputWrapper: {
+    marginTop: 20,
+    marginBottom: 12,
+    paddingHorizontal: 4,
   },
-  inputWrapper: {
-    gap: 8,
-  },
-  inputLabel: {
-    ...Typography.smallSemibold,
-    color: Palette.grey300,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  input: {
-    ...Typography.bodyMedium,
+  onboardingInput: {
+    ...Typography.title2Bold,
     color: Palette.bgWhite,
-    fontSize: 16,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 255, 255, 0.1)",
+    letterSpacing: 4,
+    fontSize: 28,
+  },
+  inputError: {
+    color: Palette.primary,
+  },
+  underline: {
+    height: 2,
+    backgroundColor: Palette.bgWhite,
+    marginTop: 8,
+    opacity: 0.3,
+  },
+  underlineError: {
+    backgroundColor: Palette.primary,
+    opacity: 1,
   },
   feedbackContainer: {
     marginTop: 16,

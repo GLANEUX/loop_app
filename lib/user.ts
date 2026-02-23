@@ -4,7 +4,6 @@ import * as FileSystem from "expo-file-system/legacy";
 
 export type ProfileUpdateInput = {
   email?: string;
-  pseudo?: string;
   firstName?: string;
   lastName?: string;
   phoneNumber?: string;
@@ -139,22 +138,19 @@ export function updateMyProfile(payload: ProfileUpdateInput, token: string) {
 }
 
 export async function updateMyEmail(email: string, token: string) {
-  try {
-    return await apiRequest("/user/me/email", {
-      method: "PATCH",
-      authToken: token,
-      body: JSON.stringify({ email }),
-    });
-  } catch (err) {
-    if (err instanceof ApiRequestError && [404, 405].includes(err.status)) {
-      return apiRequest("/user/me", {
-        method: "PATCH",
-        authToken: token,
-        body: JSON.stringify({ email }),
-      });
-    }
-    throw err;
-  }
+  return apiRequest("/user/me", {
+    method: "PATCH",
+    authToken: token,
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function updateMyPseudo(pseudo: string, token: string) {
+  return apiRequest("/user/me", {
+    method: "PATCH",
+    authToken: token,
+    body: JSON.stringify({ pseudo }),
+  });
 }
 
 export async function updateMyPassword(
@@ -166,14 +162,14 @@ export async function updateMyPassword(
     return await apiRequest("/user/me/password", {
       method: "PATCH",
       authToken: token,
-      body: JSON.stringify({ currentPassword, newPassword }),
+      body: JSON.stringify({ oldPassword: currentPassword, newPassword }),
     });
   } catch (err) {
     if (err instanceof ApiRequestError && [404, 405].includes(err.status)) {
       return apiRequest("/auth/change-password", {
         method: "POST",
         authToken: token,
-        body: JSON.stringify({ currentPassword, newPassword }),
+        body: JSON.stringify({ oldPassword: currentPassword, newPassword }),
       });
     }
     throw err;
