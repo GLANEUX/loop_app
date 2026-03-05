@@ -10,7 +10,7 @@ export const UploadSuccessScreen: React.FC = () => {
   const router = useRouter();
 
   const handleContinue = () => {
-    router.replace("/(onboarding)/welcome-rules");
+    router.replace("/welcome-rules");
   };
 
   return (

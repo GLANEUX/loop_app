@@ -241,17 +241,17 @@ export default function ProfileEditScreen() {
               <InfoRow
                 label="Pseudo"
                 value={pseudo}
-                onPress={() => router.push("/(settings)/profile-pseudo")}
+                onPress={() => router.push("/profile-pseudo")}
               />
               <InfoRow
                 label="Biographie"
                 value={bio.slice(0, 15) + (bio.length > 15 ? "..." : "")}
-                onPress={() => router.push("/(settings)/profile-bio")}
+                onPress={() => router.push("/profile-bio")}
               />
               <InfoRow
                 label="Naissance"
                 value={birthDateDisplay}
-                onPress={() => router.push("/(settings)/profile-birthdate")}
+                onPress={() => router.push("/profile-birthdate")}
                 isLast
               />
             </View>
@@ -261,7 +261,7 @@ export default function ProfileEditScreen() {
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionHeader}>Instruments</Text>
               <TouchableOpacity
-                onPress={() => router.push("/(settings)/skills-edit")}
+                onPress={() => router.push("/skills-edit")}
                 style={styles.editSectionButton}
               >
                 <EditAvatarIcon width={16} height={16} />
@@ -282,7 +282,7 @@ export default function ProfileEditScreen() {
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionHeader}>Styles musicaux</Text>
               <TouchableOpacity
-                onPress={() => router.push("/(settings)/styles-edit")}
+                onPress={() => router.push("/styles-edit")}
                 style={styles.editSectionButton}
               >
                 <EditAvatarIcon width={16} height={16} />

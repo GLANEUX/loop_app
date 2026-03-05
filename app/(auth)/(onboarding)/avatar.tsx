@@ -87,7 +87,7 @@ export const AvatarScreen: React.FC = () => {
       });
 
       await updateMyAvatar(selected, token);
-      router.push("/(onboarding)/bio");
+      router.push("/bio");
     } catch (err) {
       setError(formatApiError(err));
     } finally {

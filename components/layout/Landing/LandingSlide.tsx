@@ -27,7 +27,7 @@ export const LandingSlide: FC<LandingSlideProps> = ({
   title,
   description,
   nextRoute,
-  skipRoute = "/(landing)/landing-final" as Href,
+  skipRoute = "/get-started" as Href,
 }) => {
   const insets = useSafeAreaInsets();
   const router = useRouter();

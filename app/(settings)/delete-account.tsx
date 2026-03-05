@@ -43,7 +43,7 @@ export default function DeleteAccountScreen() {
               });
 
               await clearSession();
-              router.replace("/(auth)/authPage");
+              router.replace("/authPage");
             } catch (err) {
               setError(formatApiError(err));
               setLoading(false);

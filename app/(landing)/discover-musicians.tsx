@@ -1,4 +1,4 @@
-// app/(landing)/landing-1.tsx
+// app/landing-1.tsx
 
 import { LandingSlide } from "@/components/layout/Landing/LandingSlide";
 
@@ -10,7 +10,7 @@ export default function Landing1() {
       description={
         "Notre algorithme intelligent te connecte aux artistes compatibles avec ton style et tes envies."
       }
-      nextRoute="/(landing)/landing-2"
+      nextRoute="/match-and-chat"
     />
   );
 }

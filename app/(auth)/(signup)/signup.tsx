@@ -58,7 +58,7 @@ export const SignupScreen: React.FC = () => {
         password,
       });
       await saveSession(session);
-      router.replace("/(auth)/(onboarding)/name");
+      router.replace("/name");
     } catch (err) {
       setError(formatApiError(err));
     } finally {
@@ -66,7 +66,7 @@ export const SignupScreen: React.FC = () => {
     }
   };
 
-  const goToLogin = () => router.push("/(auth)/(login)/login");
+  const goToLogin = () => router.push("/login");
 
   // const handleSocial = (provider: "facebook" | "apple" | "google") => {
   //   console.log("Social signup:", provider);

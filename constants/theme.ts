@@ -5,18 +5,18 @@
 
 export const Palette = {
   /* Brand */
-  primary: "#DD6031",
-  primary50: "#F79773",
-  primary200: "#C54B1E",
+  primary: "#DD6031", // Orange
+  primary50: "#E6825C", // Orange éclairci (tint)
+  primary200: "#B54F28", // Orange foncé
 
-  secondary: "#8C253B",
-  secondary50: "#CE3C51",
-  secondary200: "#8C253B",
+  secondary: "#8C253B", // Rouge bordeaux
+  secondary50: "#A83F56", // Bordeaux éclairci (tint)
+  secondary200: "#6B1D2D", // Bordeaux foncé
 
   /* Surface */
-  bgBlack: "#010C13",
+  bgBlack: "#010C13", // Noir Background officiel
   bgWhite: "#FFFFFF",
-  whiteSpecial: "#FEF5EB",
+  whiteSpecial: "#FEF5EB", // Beige officiel
 
   /* Greys */
   grey100: "#E9ECEF",
@@ -41,6 +41,9 @@ export const Palette = {
   /* Others */
   opacityBackground: "rgba(0,0,0,0.45)",
   opacityBackgroundLight: "rgba(255,255,255,0.1)",
+  
+  /* Official Gradient */
+  gradient: ["#8C253B", "#DD6031"],
 };
 
 /* --------------------------------------------- */
@@ -107,9 +110,9 @@ export const Colors = {
     textError: Palette.error,
 
     /* Brand */
-    brandPrimary: Palette.primary50,
-    brandPrimaryPressed: Palette.primary,
-    brandSecondary: Palette.secondary50,
+    brandPrimary: Palette.primary,
+    brandPrimaryPressed: Palette.primary200,
+    brandSecondary: Palette.secondary,
 
     /* Icons */
     iconPrimary: Palette.bgWhite,
@@ -120,10 +123,10 @@ export const Colors = {
     borderStrong: "#2E2E2E",
 
     /* CTA */
-    ctaBg: Palette.primary50,
-    ctaBgPressed: Palette.primary,
+    ctaBg: Palette.primary,
+    ctaBgPressed: Palette.ctaPressed,
     ctaBgDisabled: Palette.grey800,
-    ctaText: Palette.bgBlack,
+    ctaText: Palette.bgWhite,
 
     /* States */
     success: Palette.valid,
@@ -131,7 +134,7 @@ export const Colors = {
     error: Palette.error,
 
     tabIconDefault: Palette.grey700,
-    tabIconSelected: Palette.primary50,
+    tabIconSelected: Palette.primary,
   },
 };
 

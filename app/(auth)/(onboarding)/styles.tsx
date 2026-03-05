@@ -105,7 +105,7 @@ export const StylesScreen: React.FC = () => {
       }
 
       await updateMyProfile({ genres: payloadGenres }, token);
-      router.push("/(onboarding)/skills");
+      router.push("/skills");
     } catch (err) {
       setError(formatApiError(err));
     } finally {

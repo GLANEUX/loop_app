@@ -99,7 +99,7 @@ export default function MessagesTabScreen() {
                   <TouchableOpacity
                     key={match.id}
                     style={styles.friendItem}
-                    onPress={() => router.push(`/(message)/${match.id}`)}
+                    onPress={() => router.push(`/message/${match.id}`)}
                     activeOpacity={0.85}
                   >
                     <Image 
@@ -134,7 +134,7 @@ export default function MessagesTabScreen() {
                 <TouchableOpacity
                   key={thread.matchId}
                   style={styles.messageRow}
-                  onPress={() => router.push(`/(message)/${thread.matchId}`)}
+                  onPress={() => router.push(`/message/${thread.matchId}`)}
                   activeOpacity={0.85}
                 >
                   <View>

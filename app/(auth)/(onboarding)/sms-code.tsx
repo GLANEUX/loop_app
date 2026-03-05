@@ -27,7 +27,7 @@ export const SmsCodeStepScreen: React.FC = () => {
 
     setError(null);
     console.log("Code SMS saisi :", code);
-    router.push("/(onboarding)/birthdate");
+    router.push("/birthdate");
   };
 
   return (

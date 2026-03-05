@@ -42,7 +42,7 @@ export const NewPasswordScreen: React.FC = () => {
     setError(null);
     console.log("New password set:", password);
 
-    router.replace("/(auth)/(login)/password-changed");
+    router.replace("/password-changed");
   };
 
   return (

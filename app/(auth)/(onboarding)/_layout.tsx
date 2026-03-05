@@ -1,4 +1,4 @@
-// app/(onboarding)/_layout.tsx
+// app/_layout.tsx
 import { Palette } from "@/constants/theme";
 import { Stack } from "expo-router";
 import React from "react";

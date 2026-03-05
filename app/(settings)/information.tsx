@@ -91,12 +91,12 @@ export default function InformationScreen() {
               <InfoRow
                 label="E-mail"
                 value={email}
-                onPress={() => router.push("/(settings)/information-email")}
+                onPress={() => router.push("/information-email")}
               />
               <InfoRow
                 label="Téléphone"
                 value={phone}
-                onPress={() => router.push("/(settings)/information-phone")}
+                onPress={() => router.push("/information-phone")}
                 isLast
               />
             </View>
@@ -108,7 +108,7 @@ export default function InformationScreen() {
               <InfoRow
                 label="Changement de mot de passe"
                 value=""
-                onPress={() => router.push("/(settings)/information-password")}
+                onPress={() => router.push("/information-password")}
                 isLast
               />
             </View>
@@ -117,7 +117,7 @@ export default function InformationScreen() {
           <View style={[styles.section, { marginTop: 20 }]}>
             <TouchableOpacity
               style={styles.deleteButton}
-              onPress={() => router.push("/(settings)/delete-account")}
+              onPress={() => router.push("/delete-account")}
               activeOpacity={0.8}
             >
               <Text style={styles.deleteText}>Supprimer mon compte</Text>

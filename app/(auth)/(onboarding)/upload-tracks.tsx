@@ -58,7 +58,7 @@ export const UploadTracksScreen: React.FC = () => {
 
     // TODO: upload vers ton backend / storage ici
     console.log("Onboarding – fichiers à envoyer :", files);
-    router.push("/(onboarding)/upload-success");
+    router.push("/upload-success");
   };
 
   return (

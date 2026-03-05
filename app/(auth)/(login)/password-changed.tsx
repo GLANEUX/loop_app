@@ -1,4 +1,4 @@
-// app/(auth)/(login)/password-changed.tsx
+// app/password-changed.tsx
 import StarIcon from "@/assets/icons/icons/shine-star.svg";
 import { ButtonLoop } from "@/components/ui";
 import { Palette, Typography } from "@/constants/theme";
@@ -12,7 +12,7 @@ export const PasswordChangedScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
 
   const handleGoToLogin = () => {
-    router.replace("/(auth)/(login)/login");
+    router.replace("/login");
   };
 
   return (

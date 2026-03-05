@@ -2,6 +2,8 @@
 import BackIcon from "@/assets/icons/icons/direction-right-2-outline-white.svg";
 import { getPreviousOnboardingRoute } from "@/lib/onboarding";
 import { useNavigation } from "@react-navigation/native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Image } from "expo-image";
 import { usePathname, useRouter } from "expo-router";
 import React, { ReactNode, useEffect, useState } from "react";
 import {
@@ -72,6 +74,10 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
       style={styles.background}
       resizeMode="cover"
     >
+      <LinearGradient
+        colors={["rgba(140, 37, 59, 0.7)", "rgba(221, 96, 49, 0.9)"]}
+        style={StyleSheet.absoluteFill}
+      />
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -118,6 +124,13 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
+            <View style={styles.logoContainer}>
+              <Image
+                source={require("@/assets/images/logo/full-white.png")}
+                style={styles.logo}
+                contentFit="contain"
+              />
+            </View>
             {children}
           </ScrollView>
         </View>
@@ -154,6 +167,15 @@ const styles = StyleSheet.create({
   },
   progressContainer: {
     flex: 1,
+  },
+  logoContainer: {
+    alignItems: "center",
+    marginBottom: 40,
+    marginTop: 10,
+  },
+  logo: {
+    width: 140,
+    height: 60,
   },
   content: {
     paddingTop: 8,

@@ -1,4 +1,4 @@
-// app/(tabs)/profile-settings.tsx (par ex.)
+// app/profile-settings.tsx (par ex.)
 
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
@@ -74,7 +74,7 @@ export const ProfileSettingsScreen: React.FC = () => {
     } finally {
       await clearSession();
       setLoggingOut(false);
-      router.replace("/(auth)/authPage");
+      router.replace("/authPage");
     }
   };
 
@@ -185,7 +185,7 @@ export const ProfileSettingsScreen: React.FC = () => {
           <View style={styles.userInfoWrap}>
             <TouchableOpacity
               style={styles.eyeButton}
-              onPress={() => router.push("/(settings)/profile")}
+              onPress={() => router.push("/profile")}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <EyeIcon width={22} height={22} />
@@ -207,17 +207,17 @@ export const ProfileSettingsScreen: React.FC = () => {
           <SettingsRow
             label="Informations"
             Icon={InfoIcon}
-            onPress={() => router.push("/(settings)/information")}
+            onPress={() => router.push("/information")}
           />
           <SettingsRow
             label="Editer le profil"
             Icon={UserIcon}
-            onPress={() => router.push("/(settings)/profile-edit")}
+            onPress={() => router.push("/profile-edit")}
           />
           {/* TODO: <SettingsRow
             label="Notifications"
             Icon={BellIcon}
-            onPress={() => router.push("/(settings)/notifications")}
+            onPress={() => router.push("/notifications")}
           /> */}
           {/* <SettingsRow label="Gérer mon abonnement" Icon={PlayIcon} /> */}
         </View>

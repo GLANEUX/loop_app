@@ -78,7 +78,7 @@ export default function ItIsAMatchScreen() {
               style={styles.primaryButton}
               onPress={() => {
                 if (params.matchId) {
-                  router.replace(`/(message)/${params.matchId}`);
+                  router.replace(`/message/${params.matchId}`);
                 } else {
                   router.back();
                 }

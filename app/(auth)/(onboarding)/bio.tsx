@@ -51,7 +51,7 @@ export const BioScreen: React.FC = () => {
       }
 
       await updateMyProfile({ bio: trimmed }, token);
-      router.push("/(auth)/(onboarding)/welcome-rules");
+      router.push("/welcome-rules");
     } catch (err) {
       setError(formatApiError(err));
     } finally {

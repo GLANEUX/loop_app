@@ -1,4 +1,4 @@
-// app/(auth)/(login)/login.tsx
+// app/login.tsx
 import OpenEyeIcon from "@/assets/icons/icons/eye-1.svg";
 import KeyIcon from "@/assets/icons/icons/group-1539-1.svg";
 import CloseEyeIcon from "@/assets/icons/icons/hide-white.svg";
@@ -51,10 +51,10 @@ export const LoginScreen: React.FC = () => {
         if (entry) {
           router.replace(entry);
         } else {
-          router.replace("/(tabs)/explore");
+          router.replace("/explore");
         }
       } catch {
-        router.replace("/(tabs)/explore");
+        router.replace("/explore");
       }
     } catch (err) {
       if (err instanceof ApiRequestError) {
@@ -126,7 +126,7 @@ export const LoginScreen: React.FC = () => {
             />
 
             <TouchableOpacity
-              onPress={() => router.push("/(auth)/(login)/forgot-password")}
+              onPress={() => router.push("/forgot-password")}
             >
               <Text style={styles.forgotText}>Mot de passe oublié ?</Text>
             </TouchableOpacity>
@@ -144,7 +144,7 @@ export const LoginScreen: React.FC = () => {
             <View style={styles.registerRow}>
               <Text style={styles.registerText}>Pas de compte ? </Text>
               <TouchableOpacity
-                onPress={() => router.push("/(auth)/(signup)/signup")}
+                onPress={() => router.push("/signup")}
               >
                 <Text style={styles.registerLink}>S’inscrire</Text>
               </TouchableOpacity>

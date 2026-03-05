@@ -1,4 +1,4 @@
-// app/(auth)/authPage.tsx
+// app/authPage.tsx
 import InfoIcon from "@/assets/icons/icons/information-circle-white.svg";
 import { ButtonLoop, IconButton } from "@/components/ui";
 import { getOnboardingEntry } from "@/lib/onboarding";
@@ -26,7 +26,7 @@ export const AuthLandingScreen: React.FC = () => {
         const me = await getMyProfileCached(token);
         const entry = getOnboardingEntry(me.profile);
         if (active) {
-          router.replace(entry ?? "/(tabs)/explore");
+          router.replace(entry ?? "/explore");
         }
       } catch {
         if (active) setChecking(false);
@@ -39,15 +39,15 @@ export const AuthLandingScreen: React.FC = () => {
   }, [router]);
 
   const handleLogin = () => {
-    router.replace("/(auth)/(login)/login");
+    router.replace("/login");
   };
 
   const handleRegister = () => {
-    router.replace("/(auth)/(signup)/signup");
+    router.replace("/signup");
   };
 
   const handleInfoPress = () => {
-    router.replace("/(landing)/landing-1");
+    router.replace("/discover-musicians");
   };
 
   if (checking) return null;

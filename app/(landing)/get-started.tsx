@@ -1,4 +1,4 @@
-// app/(landing)/landing-final.tsx
+// app/landing-final.tsx
 import { MatchCircleHero } from "@/components/layout";
 import { ButtonLoop, TopNavButton } from "@/components/ui";
 import { Palette, Typography } from "@/constants/theme";
@@ -16,11 +16,11 @@ export const LandingFinal: React.FC<Props> = ({ onStart }) => {
 
   const handleStartPress = () => {
     if (onStart) onStart();
-    router.replace("/(auth)/authPage");
+    router.replace("/authPage");
   };
 
   const handleRestart = () => {
-    router.replace("/(landing)/landing-1");
+    router.replace("/discover-musicians");
   };
 
   return (

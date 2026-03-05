@@ -136,7 +136,7 @@ export default function ExploreTabScreen() {
         const response = await likeUser(sessionToken, profile.userId);
         if (response.matched) {
           router.push({
-            pathname: "/(match)/it-is-a-match",
+            pathname: "/it-is-a-match",
             params: {
               matchId: response.matchId,
               targetUserId: profile.userId,
@@ -313,7 +313,7 @@ export default function ExploreTabScreen() {
             <TouchableOpacity
               style={styles.userPill}
               activeOpacity={0.85}
-              onPress={() => router.push(`/(settings)/user/${currentProfile.userId}`)}
+              onPress={() => router.push(`/user/${currentProfile.userId}`)}
             >
               <Image
                 source={userAvatarSource}

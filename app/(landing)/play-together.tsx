@@ -1,4 +1,4 @@
-// app/(landing)/landing-3.tsx
+// app/landing-3.tsx
 
 import { LandingSlide } from "@/components/layout/Landing/LandingSlide";
 
@@ -10,7 +10,7 @@ export default function Landing3() {
       description={
         "Connecte-toi avec une communauté de passionnés, sérieux et fiables."
       }
-      nextRoute="/(landing)/landing-final"
+      nextRoute="/get-started"
     />
   );
 }

@@ -1,13 +1,13 @@
 // src/screens/onboarding/NameScreen.tsx
 import { OnboardingLayout } from "@/components/layout";
-import { ButtonLoop } from "@/components/ui";
+import { ButtonLoop, OnboardingInput } from "@/components/ui";
 import { Palette, Typography } from "@/constants/theme";
 import { formatApiError } from "@/lib/api";
 import { getAccessToken } from "@/lib/session";
 import { getMyProfileCached, updateMyProfile } from "@/lib/user";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { StyleSheet, Text, TextInput, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 export const NameScreen: React.FC = () => {
   const router = useRouter();
@@ -59,7 +59,7 @@ export const NameScreen: React.FC = () => {
         token,
       );
 
-      router.push("/(onboarding)/birthdate");
+      router.push("/birthdate");
     } catch (err) {
       setError(formatApiError(err));
     } finally {
@@ -76,30 +76,27 @@ export const NameScreen: React.FC = () => {
       <Text style={styles.title}>Ton nom</Text>
       <Text style={styles.subtitle}>Indique ton prénom et ton nom.</Text>
 
-      {error && <Text style={styles.errorText}>{error}</Text>}
-
-      <View style={styles.inputWrapper}>
-        <TextInput
-          style={styles.input}
+      <View style={styles.formContainer}>
+        <OnboardingInput
           value={firstName}
-          onChangeText={setFirstName}
+          onChangeText={(text) => {
+            setFirstName(text);
+            if (error) setError(null);
+          }}
           placeholder="Prénom"
-          placeholderTextColor={Palette.grey300}
           autoCapitalize="words"
         />
-        <View style={styles.underline} />
-      </View>
 
-      <View style={styles.inputWrapper}>
-        <TextInput
-          style={styles.input}
+        <OnboardingInput
           value={lastName}
-          onChangeText={setLastName}
+          onChangeText={(text) => {
+            setLastName(text);
+            if (error) setError(null);
+          }}
           placeholder="Nom"
-          placeholderTextColor={Palette.grey300}
           autoCapitalize="words"
+          error={error}
         />
-        <View style={styles.underline} />
       </View>
 
       <View style={styles.buttonWrapper}>
@@ -113,29 +110,15 @@ const styles = StyleSheet.create({
   title: {
     ...Typography.title1Bold,
     color: Palette.bgWhite,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   subtitle: {
     ...Typography.bodyRegular,
-    color: Palette.bgWhite,
-    marginBottom: 24,
+    color: "rgba(255, 255, 255, 0.7)",
+    marginBottom: 32,
   },
-  inputWrapper: {
-    marginBottom: 16,
-  },
-  input: {
-    ...Typography.title2Bold,
-    color: Palette.bgWhite,
-  },
-  underline: {
-    height: 2,
-    backgroundColor: Palette.bgWhite,
-    marginTop: 6,
-  },
-  errorText: {
-    marginBottom: 16,
-    ...Typography.bodyBold,
-    color: Palette.primary,
+  formContainer: {
+    marginTop: 8,
   },
   buttonWrapper: {
     marginTop: 16,

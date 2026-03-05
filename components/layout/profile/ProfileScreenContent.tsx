@@ -195,7 +195,7 @@ export default function ProfileScreenContent({
                       {isOwnProfile && (
                         <TouchableOpacity 
                           style={styles.iconButton} 
-                          onPress={() => router.push("/(settings)/profile-edit")}
+                          onPress={() => router.push("/profile-edit")}
                         >
                           <EditIcon width={24} height={24} />
                         </TouchableOpacity>

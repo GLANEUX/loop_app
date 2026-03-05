@@ -1,13 +1,13 @@
 // src/screens/onboarding/BirthdateScreen.tsx
 import { OnboardingLayout } from "@/components/layout";
-import { ButtonLoop } from "@/components/ui";
+import { ButtonLoop, OnboardingInput } from "@/components/ui";
 import { Palette, Typography } from "@/constants/theme";
 import { formatApiError } from "@/lib/api";
 import { getAccessToken } from "@/lib/session";
 import { getMyProfileCached, updateMyProfile } from "@/lib/user";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { StyleSheet, Text, TextInput, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 export const BirthdateScreen: React.FC = () => {
   const router = useRouter();
@@ -108,7 +108,7 @@ export const BirthdateScreen: React.FC = () => {
       }
 
       await updateMyProfile({ birthDate: isoDate }, token);
-      router.push("/(onboarding)/gender");
+      router.push("/gender");
     } catch (err) {
       setError(formatApiError(err));
     } finally {
@@ -126,18 +126,15 @@ export const BirthdateScreen: React.FC = () => {
         Tu dois avoir au moins 18 ans pour rejoindre Loop.
       </Text>
 
-      <View style={styles.inputWrapper}>
-        <TextInput
-          style={[styles.input, error && styles.inputError]}
+      <View style={styles.formContainer}>
+        <OnboardingInput
           keyboardType="number-pad"
           placeholder="JJ/MM/AAAA"
-          placeholderTextColor="rgba(255,255,255,0.6)"
           value={birthdate}
           onChangeText={handleChange}
+          error={error}
+          style={styles.inputStyle}
         />
-        <View style={[styles.underline, error && styles.underlineError]} />
-
-        {error && <Text style={styles.errorText}>{error}</Text>}
       </View>
 
       <Text style={styles.reminder}>
@@ -155,41 +152,24 @@ const styles = StyleSheet.create({
   title: {
     ...Typography.title1Bold,
     color: Palette.bgWhite,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   subtitle: {
     ...Typography.bodyRegular,
-    color: Palette.bgWhite,
+    color: "rgba(255, 255, 255, 0.7)",
     marginBottom: 32,
   },
-  inputWrapper: {
-    marginBottom: 12,
+  formContainer: {
+    marginTop: 8,
   },
-  input: {
-    ...Typography.title2Bold,
-    color: Palette.bgWhite,
+  inputStyle: {
     letterSpacing: 4,
-  },
-  inputError: {
-    color: Palette.primary,
-  },
-  underline: {
-    height: 2,
-    backgroundColor: Palette.bgWhite,
-    marginTop: 4,
-  },
-  underlineError: {
-    backgroundColor: Palette.primary,
-  },
-  errorText: {
-    marginTop: 6,
-    ...Typography.smallLight,
-    color: Palette.primary,
   },
   reminder: {
     ...Typography.bodyRegular,
-    color: Palette.bgWhite,
+    color: "rgba(255, 255, 255, 0.5)",
     marginBottom: 32,
+    fontSize: 13,
   },
   buttonWrapper: {
     marginTop: 8,

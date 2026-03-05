@@ -32,7 +32,7 @@ const VerifyCodeScreen: React.FC = () => {
     }
 
     console.log("Code de vérification:", code);
-    router.replace("/(auth)/(login)/new-password");
+    router.replace("/new-password");
   };
 
   return (

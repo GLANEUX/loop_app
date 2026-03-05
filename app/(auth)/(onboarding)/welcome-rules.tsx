@@ -11,7 +11,7 @@ export const WelcomeRulesScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
 
   const handleStart = () => {
-    router.replace("/(tabs)/explore");
+    router.replace("/explore");
   };
 
   return (

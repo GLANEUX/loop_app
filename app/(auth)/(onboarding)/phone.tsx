@@ -106,7 +106,7 @@ export const PhoneStepScreen: React.FC = () => {
       }
 
       await updateMyProfile({ phoneNumber: internationalNumber }, token);
-      router.push("/(auth)/(onboarding)/birthdate");
+      router.push("/birthdate");
     } catch (err) {
       setError(formatApiError(err));
     } finally {

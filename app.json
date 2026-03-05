@@ -4,7 +4,7 @@
     "slug": "loop",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/logo/logo-loop-white.png",
+    "icon": "./assets/images/logo/icon-brand-plain.png",
     "scheme": "loop",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -13,10 +13,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/logo/logo-loop-white.png",
-        "backgroundImage": "./assets/images/logo/logo-loop-white.png",
-        "monochromeImage": "./assets/images/logo/logo-loop-white.png"
+        "backgroundColor": "#CE3C51",
+        "foregroundImage": "./assets/images/logo/icon-white.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -24,14 +22,14 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/logo/logo-loop-white.png"
+      "favicon": "./assets/images/logo/favicon.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/logo/logo-loop-white.png",
+          "image": "./assets/images/logo/full-white.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#CE3C51",

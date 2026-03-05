@@ -1,4 +1,4 @@
-// app/(auth)/(login)/forgot-password.tsx
+// app/forgot-password.tsx
 import BackIcon from "@/assets/icons/icons/direction-right-2-outline-white.svg";
 import MailIcon from "@/assets/icons/icons/mail-outline-white.svg";
 
@@ -33,7 +33,7 @@ const ForgotPasswordScreen: React.FC = () => {
     setError(null);
     console.log("Send reset code to:", email);
 
-    router.push("/(auth)/(login)/verify-code");
+    router.push("/verify-code");
   };
 
   return (

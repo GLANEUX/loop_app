@@ -30,7 +30,7 @@ export default function LandingLayout() {
         const me = await getMyProfileCached(token);
         const entry = getOnboardingEntry(me.profile);
         if (active) {
-          router.replace(entry ?? "/(tabs)/explore");
+          router.replace(entry ?? "/explore");
         }
       } catch {
         if (active) setChecking(false);

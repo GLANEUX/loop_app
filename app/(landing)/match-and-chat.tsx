@@ -1,4 +1,4 @@
-// app/(landing)/landing-2.tsx
+// app/landing-2.tsx
 
 import { LandingSlide } from "@/components/layout/Landing/LandingSlide";
 
@@ -10,7 +10,7 @@ export default function Landing2() {
       description={
         "Planifie rapidement tes répètes, échange des samples et coordonne tes projets sans prise de tête."
       }
-      nextRoute="/(landing)/landing-3"
+      nextRoute="/play-together"
     />
   );
 }

@@ -9,7 +9,7 @@ export const OopsScreen: React.FC = () => {
   const router = useRouter();
   const params = useLocalSearchParams<{ next?: string }>();
   const step = typeof params.next === "string" ? params.next : "name";
-  const nextRoute = `/(auth)/(onboarding)/${step}`;
+  const nextRoute = `/${step}`;
 
   const handleContinue = () => {
     router.push(nextRoute);

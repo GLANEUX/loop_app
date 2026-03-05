@@ -59,7 +59,7 @@ export const GenderScreen: React.FC = () => {
       }
 
       await updateMyProfile({ gender: selected }, token);
-      router.push("/(onboarding)/styles");
+      router.push("/styles");
     } catch (err) {
       setError(formatApiError(err));
     } finally {

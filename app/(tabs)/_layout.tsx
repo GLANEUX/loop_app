@@ -1,4 +1,4 @@
-// app/(tabs)/_layout.tsx
+// app/_layout.tsx
 import MessageIconWhite from "@/assets/icons/icons/message-outline-white.svg";
 import MessageIconBlack from "@/assets/icons/icons/message-outline.svg";
 import MusicIconWhite from "@/assets/icons/icons/music-white.svg";

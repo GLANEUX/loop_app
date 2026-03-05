@@ -140,7 +140,7 @@ export const SkillsScreen: React.FC = () => {
       }
 
       await updateMyProfile({ instruments: payloadInstruments }, token);
-      router.push("/(onboarding)/avatar");
+      router.push("/avatar");
     } catch (err) {
       setError(formatApiError(err));
     } finally {
