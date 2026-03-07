@@ -1,25 +1,28 @@
-// components/landing/LandingSlide.tsx
+// components/layout/Landing/LandingSlide.tsx
 import { LinearGradient } from "expo-linear-gradient";
 import { Href, useRouter } from "expo-router";
 import { FC } from "react";
 import {
-  ImageBackground,
-  ImageSourcePropType,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
+import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, { 
+  FadeInDown, 
+  FadeIn
+} from "react-native-reanimated";
 
 import { ButtonLoop, TopNavButton } from "@/components/ui";
 import { Palette, Typography } from "@/constants/theme";
 
 interface LandingSlideProps {
-  image: ImageSourcePropType;
+  image: any;
   title: string;
   description: string;
   nextRoute: Href;
   skipRoute?: Href;
+  showBack?: boolean;
 }
 
 export const LandingSlide: FC<LandingSlideProps> = ({
@@ -28,6 +31,7 @@ export const LandingSlide: FC<LandingSlideProps> = ({
   description,
   nextRoute,
   skipRoute = "/get-started" as Href,
+  showBack = false,
 }) => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -40,12 +44,27 @@ export const LandingSlide: FC<LandingSlideProps> = ({
     router.replace(skipRoute);
   };
 
+  const handleBack = () => {
+    router.back();
+  };
+
   return (
-    <ImageBackground source={image} style={styles.background}>
-      <LinearGradient
-        colors={["rgba(0,0,0,0.1)", "rgba(0,0,0,0.85)"]}
-        style={styles.overlay}
-      />
+    <View style={styles.container}>
+      {/* Background Image with expo-image for better perf & caching */}
+      <View style={StyleSheet.absoluteFill}>
+        <Image
+          source={image}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          transition={300}
+          cachePolicy="memory-disk"
+        />
+        <LinearGradient
+          colors={["rgba(0,0,0,0.2)", "rgba(0,0,0,0.5)", "rgba(0,0,0,0.95)"]}
+          locations={[0, 0.4, 1]}
+          style={StyleSheet.absoluteFill}
+        />
+      </View>
 
       <View
         style={[
@@ -56,35 +75,49 @@ export const LandingSlide: FC<LandingSlideProps> = ({
           },
         ]}
       >
-        <View style={styles.topBar}>
-          <View />
+        <Animated.View entering={FadeIn.delay(100).duration(400)} style={styles.topBar}>
+          {showBack ? (
+            <TopNavButton label="Retour" onPress={handleBack} variant="text" />
+          ) : (
+            <View />
+          )}
           <TopNavButton label="Passer" onPress={handleSkip} variant="text" />
-        </View>
+        </Animated.View>
 
         <View style={styles.bottomContent}>
           <View style={styles.textBlock}>
-            <Text style={styles.title}>{title}</Text>
-            <Text style={styles.description}>{description}</Text>
+            <Animated.Text 
+              entering={FadeInDown.delay(200).duration(600)}
+              style={styles.title}
+            >
+              {title}
+            </Animated.Text>
+            <Animated.Text 
+              entering={FadeInDown.delay(400).duration(600)}
+              style={styles.description}
+            >
+              {description}
+            </Animated.Text>
           </View>
 
-          <ButtonLoop
-            label="Suivant"
-            withArrow
-            onPress={handleNext}
-            style={{ marginTop: 12 }}
-          />
+          <Animated.View entering={FadeInDown.delay(600).duration(600).springify()}>
+            <ButtonLoop
+              label="Suivant"
+              withArrow
+              onPress={handleNext} 
+              style={{ marginTop: 12 }}
+            />
+          </Animated.View>
         </View>
       </View>
-    </ImageBackground>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  background: {
+  container: {
     flex: 1,
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
+    backgroundColor: Palette.bgBlack,
   },
   content: {
     flex: 1,
@@ -96,12 +129,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  skipText: {
-    ...Typography.smallSemibold,
-    color: Palette.bgWhite,
-  },
   bottomContent: {
     gap: 32,
+    marginBottom: 20,
   },
   textBlock: {
     gap: 16,
@@ -109,20 +139,13 @@ const styles = StyleSheet.create({
   title: {
     ...Typography.title1Bold,
     color: Palette.bgWhite,
+    fontSize: 36,
+    lineHeight: 44,
   },
   description: {
     ...Typography.bodyRegular,
-    color: Palette.bgWhite,
-  },
-  ctaButton: {
-    backgroundColor: Palette.primary,
-    borderRadius: 999,
-    paddingVertical: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  ctaText: {
-    ...Typography.bodyBold,
-    color: Palette.bgWhite,
+    color: "rgba(255, 255, 255, 0.8)",
+    fontSize: 17,
+    lineHeight: 26,
   },
 });

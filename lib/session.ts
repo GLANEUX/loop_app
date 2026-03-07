@@ -8,8 +8,8 @@ export type StoredUser = {
   id: string;
   email: string;
   role: string;
-  firstName: string;
-  lastName: string;
+  firstName?: string;
+  lastName?: string;
 };
 
 export async function saveSession(data: {

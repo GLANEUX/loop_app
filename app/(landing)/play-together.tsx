@@ -11,6 +11,7 @@ export default function Landing3() {
         "Connecte-toi avec une communauté de passionnés, sérieux et fiables."
       }
       nextRoute="/get-started"
+      showBack={true}
     />
   );
 }

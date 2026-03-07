@@ -143,31 +143,57 @@ export async function apiRequest<T>(
 
 export function formatApiError(error: unknown) {
   if (error instanceof ApiRequestError) {
+    // Erreur réseau (status 0)
+    if (error.status === 0) {
+      return "Impossible de joindre le serveur. Vérifiez votre connexion.";
+    }
+
     if (error.status === 401) {
-      return "E-mail ou mot de passe invalide.";
+      return "E-mail ou mot de passe incorrect.";
+    }
+    if (error.status === 403) {
+      return "Action non autorisée.";
     }
     if (error.status === 429) {
-      return "Trop de tentatives. Reessayez plus tard.";
+      return "Trop de tentatives. Réessayez plus tard.";
     }
-    const message = error.details?.message;
+    if (error.status >= 500) {
+      return "Erreur serveur. Nos musiciens s'en occupent !";
+    }
+
+    const details = error.details;
+    const message = details?.message;
+
+    // Si le message est une simple chaîne, on tente de le rendre plus humain
     if (typeof message === "string" && message.trim().length > 0) {
-      return message;
+      const cleanMessage = message.trim();
+      if (cleanMessage.toLowerCase().includes("already exists")) {
+        return "Cette information est déjà utilisée.";
+      }
+      return cleanMessage;
     }
+
+    // Si c'est un objet de validation complexe
     if (message && typeof message === "object") {
       const extracted = extractValidationMessages(message);
       if (extracted.length > 0) {
-        return extracted.join("\n");
+        // On retourne la première erreur pour ne pas surcharger l'affichage
+        return extracted[0];
       }
       return "Certains champs sont invalides.";
     }
-    return "Une erreur s'est produite.";
+    
+    return details?.error || "Une erreur inattendue est survenue.";
   }
 
   if (error instanceof Error && error.message) {
+    if (error.message === "Network request failed") {
+      return "Erreur réseau. Le serveur est peut-être éteint.";
+    }
     return error.message;
   }
 
-  return "Une erreur s'est produite.";
+  return "Une erreur est survenue.";
 }
 
 function extractValidationMessages(payload: unknown): string[] {
@@ -179,6 +205,7 @@ function extractValidationMessages(payload: unknown): string[] {
 
   const messages: string[] = [];
 
+  // Cas où les erreurs sont directement dans un tableau 'errors'
   if (Array.isArray(maybeMessage.errors)) {
     for (const err of maybeMessage.errors) {
       if (typeof err === "string" && err.trim().length > 0) {
@@ -187,16 +214,24 @@ function extractValidationMessages(payload: unknown): string[] {
     }
   }
 
+  // Cas où les erreurs sont par propriété (mongoose/class-validator style)
   if (maybeMessage.properties && typeof maybeMessage.properties === "object") {
-    for (const [field, value] of Object.entries(maybeMessage.properties)) {
+    for (const [, value] of Object.entries(maybeMessage.properties)) {
       if (value && Array.isArray(value.errors)) {
         for (const err of value.errors) {
           if (typeof err === "string" && err.trim().length > 0) {
-            const trimmed = err.trim();
-            messages.push(`${field}: ${trimmed}`);
+            // On ne prend que le message, sans le nom du champ technique
+            messages.push(err.trim());
           }
         }
       }
+    }
+  }
+
+  // Support pour d'autres formats de validation (NestJS/Simple array of strings)
+  if (Array.isArray(payload)) {
+    for (const item of payload) {
+      if (typeof item === "string") messages.push(item);
     }
   }
 

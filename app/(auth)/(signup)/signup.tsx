@@ -100,7 +100,7 @@ export const SignupScreen: React.FC = () => {
           </View>
 
           <View style={styles.card}>
-            {error && <Text style={styles.errorText}>{error}</Text>}
+            {!!error && <Text style={styles.errorText}>{error}</Text>}
 
             <AuthTextField
               label="Pseudo"
@@ -139,7 +139,7 @@ export const SignupScreen: React.FC = () => {
             />
 
             <AuthTextField
-              label="Confirmer le mot de passe"
+              label="Confirmer"
               value={passwordConfirm}
               onChangeText={setPasswordConfirm}
               placeholder="Confirmer le mot de passe"

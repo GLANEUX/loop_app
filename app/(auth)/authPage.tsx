@@ -1,13 +1,20 @@
-// app/authPage.tsx
+// app/(auth)/authPage.tsx
 import InfoIcon from "@/assets/icons/icons/information-circle-white.svg";
 import { ButtonLoop, IconButton } from "@/components/ui";
+import { Palette, Typography } from "@/constants/theme";
 import { getOnboardingEntry } from "@/lib/onboarding";
 import { getAccessToken } from "@/lib/session";
 import { getMyProfileCached } from "@/lib/user";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ImageBackground, StyleSheet, View } from "react-native";
+import { StyleSheet, View, StatusBar } from "react-native";
+import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, { 
+  FadeInDown, 
+  FadeIn, 
+} from "react-native-reanimated";
 
 export const AuthLandingScreen: React.FC = () => {
   const router = useRouter();
@@ -39,11 +46,11 @@ export const AuthLandingScreen: React.FC = () => {
   }, [router]);
 
   const handleLogin = () => {
-    router.replace("/login");
+    router.push("/login");
   };
 
   const handleRegister = () => {
-    router.replace("/signup");
+    router.push("/signup");
   };
 
   const handleInfoPress = () => {
@@ -53,11 +60,26 @@ export const AuthLandingScreen: React.FC = () => {
   if (checking) return null;
 
   return (
-    <ImageBackground
-      source={require("@/assets/images/auth/auth-landing.png")}
-      style={styles.background}
-      resizeMode="cover"
-    >
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      
+      {/* Background with Expo Image for optimized loading */}
+      <View style={StyleSheet.absoluteFill}>
+        <Image
+          source={require("@/assets/images/auth/auth-landing.png")}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          transition={600}
+          priority="high"
+          placeholder="L025_#00000000"
+        />
+        <LinearGradient
+          colors={["transparent", "rgba(0,0,0,0.6)", Palette.bgBlack]}
+          locations={[0, 0.4, 0.8]}
+          style={StyleSheet.absoluteFill}
+        />
+      </View>
+
       <View
         style={[
           styles.safeAreaContainer,
@@ -72,40 +94,40 @@ export const AuthLandingScreen: React.FC = () => {
         </View>
 
         <View style={styles.bottomCard}>
-          <ButtonLoop
-            label="Connexion"
-            variant="outline"
-            onPress={handleLogin}
-          />
+          <Animated.View entering={FadeInDown.delay(400).duration(800).springify()}>
+            <ButtonLoop
+              label="Connexion"
+              variant="outline"
+              onPress={handleLogin}
+            />
+          </Animated.View>
 
-          <ButtonLoop
-            label="S’inscrire gratuitement"
-            onPress={handleRegister}
-          />
-
-          {/* <SocialAuthSection onSelect={handleSocial} /> */}
+          <Animated.View entering={FadeInDown.delay(600).duration(800).springify()}>
+            <ButtonLoop
+              label="S’inscrire gratuitement"
+              onPress={handleRegister}
+            />
+          </Animated.View>
         </View>
       </View>
-    </ImageBackground>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  background: {
+  container: {
     flex: 1,
+    backgroundColor: Palette.bgBlack,
   },
-
   safeAreaContainer: {
     flex: 1,
     paddingHorizontal: 24,
     justifyContent: "space-between",
   },
-
   topBar: {
     width: "100%",
     alignItems: "flex-end",
   },
-
   bottomCard: {
     gap: 16,
     marginBottom: 20,

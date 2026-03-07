@@ -1,16 +1,22 @@
-// components/ui/Button/ButtonLoop.tsx
 import ArrowRight from "@/assets/icons/icons/direction-right-2-outline-white.svg";
 import { Palette, Typography } from "@/constants/theme";
+import { LinearGradient } from "expo-linear-gradient";
+import * as Haptics from "expo-haptics";
 import React from "react";
 import {
   ActivityIndicator,
   GestureResponderEvent,
   StyleSheet,
   Text,
-  TouchableOpacity,
+  Pressable,
   View,
   ViewStyle,
 } from "react-native";
+import Animated, { 
+  useAnimatedStyle, 
+  useSharedValue, 
+  withSpring 
+} from "react-native-reanimated";
 
 type ButtonVariant = "primary" | "outline";
 
@@ -36,72 +42,141 @@ export const ButtonLoop: React.FC<ButtonLoopProps> = ({
   style,
 }) => {
   const isPrimary = variant === "primary";
+  const scale = useSharedValue(1);
+
+  const handlePressIn = () => {
+    if (!disabled && !loading) {
+      scale.value = withSpring(0.96, { damping: 10, stiffness: 300 });
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  };
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1, { damping: 10, stiffness: 300 });
+  };
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const content = (
+    <View style={styles.contentRow}>
+      <Text
+        style={[
+          styles.text,
+          isPrimary ? styles.textPrimary : styles.textOutline,
+        ]}
+      >
+        {label}
+      </Text>
+
+      {withArrow && (
+        <View style={styles.arrowContainer}>
+          <ArrowRight width={24} height={24} />
+        </View>
+      )}
+    </View>
+  );
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.85}
+    <Pressable
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
       onPress={onPress}
       disabled={disabled || loading}
       style={[
-        styles.base,
-        isPrimary ? styles.primary : styles.outline,
+        styles.pressableBase,
         fullWidth && { alignSelf: "stretch" },
-        disabled && { opacity: 0.5 },
         style,
       ]}
     >
-      {loading ? (
-        <ActivityIndicator
-          size="small"
-          color={isPrimary ? Palette.bgWhite : Palette.primary}
-        />
-      ) : (
-        <View style={styles.contentRow}>
-          <Text
-            style={[
-              styles.text,
-              isPrimary ? styles.textPrimary : styles.textOutline,
-            ]}
+      <Animated.View
+        style={[
+          styles.base,
+          isPrimary && styles.shadow,
+          disabled && { opacity: 0.5 },
+          animatedStyle,
+        ]}
+      >
+        {isPrimary ? (
+          <LinearGradient
+            colors={[Palette.primary, "#B04226"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.gradient}
           >
-            {label}
-          </Text>
-
-          {withArrow && <ArrowRight width={30} height={30} />}
-        </View>
-      )}
-    </TouchableOpacity>
+            {loading ? (
+              <ActivityIndicator size="small" color={Palette.bgWhite} />
+            ) : (
+              content
+            )}
+          </LinearGradient>
+        ) : (
+          <View style={[styles.outline, styles.gradient]}>
+            {loading ? (
+              <ActivityIndicator size="small" color={Palette.primary} />
+            ) : (
+              content
+            )}
+          </View>
+        )}
+      </Animated.View>
+    </Pressable>
   );
 };
 
 const styles = StyleSheet.create({
+  pressableBase: {
+    // Necessary to avoid shadow clipping if needed
+  },
   base: {
-    borderRadius: 999,
-    paddingVertical: 16,
+    borderRadius: 100,
+    height: 60,
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  gradient: {
+    flex: 1,
+    borderRadius: 100,
     alignItems: "center",
     justifyContent: "center",
-  },
-  primary: {
-    backgroundColor: Palette.primary,
+    paddingHorizontal: 24,
   },
   outline: {
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: Palette.primary,
     backgroundColor: "transparent",
+  },
+  shadow: {
+    // Ombre pour iOS
+    shadowColor: Palette.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    // Elévation pour Android
+    elevation: 6,
   },
   contentRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    justifyContent: "center",
+    width: "100%",
+    position: "relative",
   },
   text: {
     ...Typography.bodyBold,
-    fontSize: 16,
+    fontSize: 18,
+    letterSpacing: 0.5,
   },
   textPrimary: {
     color: Palette.bgWhite,
   },
   textOutline: {
     color: Palette.primary,
+  },
+  arrowContainer: {
+    position: "absolute",
+    right: 0,
   },
 });
 

@@ -59,7 +59,7 @@ export const NameScreen: React.FC = () => {
         token,
       );
 
-      router.push("/birthdate");
+      router.push("/phone");
     } catch (err) {
       setError(formatApiError(err));
     } finally {

@@ -4,6 +4,7 @@ import { getMyProfileCached } from "@/lib/user";
 import { Palette } from "@/constants/theme";
 import { Stack, usePathname, useRouter, useSegments } from "expo-router";
 import React, { useEffect, useState } from "react";
+import { View } from "react-native";
 
 export default function LandingLayout() {
   const router = useRouter();
@@ -30,8 +31,9 @@ export default function LandingLayout() {
         const me = await getMyProfileCached(token);
         const entry = getOnboardingEntry(me.profile);
         if (active) {
-          router.replace(entry ?? "/explore");
+          // router.replace(entry ?? "/explore");
         }
+        setChecking(false);
       } catch {
         if (active) setChecking(false);
       }
@@ -42,14 +44,15 @@ export default function LandingLayout() {
     };
   }, [router, pathname, segments]);
 
-  if (checking) return null;
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        animation: "ios_from_right",
-        contentStyle: { backgroundColor: Palette.bgBlack },
-      }}
-    />
+    <View style={{ flex: 1, backgroundColor: Palette.bgBlack }}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          animation: "slide_from_right",
+          contentStyle: { backgroundColor: Palette.bgBlack },
+        }}
+      />
+    </View>
   );
 }

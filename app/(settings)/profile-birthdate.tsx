@@ -128,6 +128,19 @@ export default function ProfileBirthDateScreen() {
     }
   };
 
+  const currentIsoDate = (() => {
+    const digits = birthDate.replaceAll(/[^\d]/g, "");
+    if (digits.length !== 8) return "";
+    const day = digits.slice(0, 2);
+    const month = digits.slice(2, 4);
+    const year = digits.slice(4);
+    return `${year}-${month}-${day}`;
+  })();
+
+  const isUnchanged = currentIsoDate === initialBirthDate;
+  const isIncomplete = birthDate.length < 10;
+  const isSaveDisabled = loading || !!success || isUnchanged || isIncomplete;
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
@@ -187,7 +200,7 @@ export default function ProfileBirthDateScreen() {
             onPress={handleSave}
             loading={loading}
             style={styles.saveButton}
-            disabled={loading || !!success}
+            disabled={isSaveDisabled}
           />
         </ScrollView>
       </KeyboardAvoidingView>

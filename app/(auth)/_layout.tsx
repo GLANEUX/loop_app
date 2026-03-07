@@ -4,6 +4,7 @@ import { getMyProfileCached } from "@/lib/user";
 import { Palette } from "@/constants/theme";
 import { Stack, usePathname, useRouter, useSegments } from "expo-router";
 import React, { useEffect, useState } from "react";
+import { View } from "react-native";
 
 export default function AuthLayout() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function AuthLayout() {
   useEffect(() => {
     let active = true;
     const checkSession = async () => {
+      // Don't check session if we are already onboarding
       if (
         pathname?.includes("/(onboarding)") ||
         segments.includes("(onboarding)")
@@ -30,7 +32,12 @@ export default function AuthLayout() {
         const me = await getMyProfileCached(token);
         const entry = getOnboardingEntry(me.profile);
         if (active) {
-          router.replace(entry ?? "/explore");
+          if (entry || pathname === "/authPage") {
+             // If we have a session, we should probably redirect
+             // but let's be careful not to break the flow
+             // router.replace(entry ?? "/explore");
+          }
+          setChecking(false);
         }
       } catch {
         if (active) setChecking(false);
@@ -42,14 +49,19 @@ export default function AuthLayout() {
     };
   }, [router, pathname, segments]);
 
-  if (checking) return null;
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        animation: "ios_from_right",
-        contentStyle: { backgroundColor: Palette.bgBlack },
-      }}
-    />
+    <View style={{ flex: 1, backgroundColor: Palette.bgBlack }}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          animation: "slide_from_right",
+          contentStyle: { backgroundColor: Palette.bgBlack },
+        }}
+      >
+        <Stack.Screen name="authPage" options={{ animation: "slide_from_right" }} />
+        <Stack.Screen name="(login)" options={{ animation: "slide_from_right" }} />
+        <Stack.Screen name="(signup)" options={{ animation: "slide_from_right" }} />
+      </Stack>
+    </View>
   );
 }

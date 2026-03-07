@@ -11,6 +11,7 @@ export default function Landing2() {
         "Planifie rapidement tes répètes, échange des samples et coordonne tes projets sans prise de tête."
       }
       nextRoute="/play-together"
+      showBack={true}
     />
   );
 }

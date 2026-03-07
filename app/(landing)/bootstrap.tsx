@@ -1,13 +1,15 @@
-import { useEffect, useRef, useState } from "react";
-import { Animated, Easing, StyleSheet, Text, View } from "react-native";
 import { Image } from "expo-image";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
+import { useEffect, useRef, useState } from "react";
+import { Animated, Easing, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Asset } from "expo-asset";
 
 import { Palette, Typography } from "@/constants/theme";
 import { getAccessToken } from "@/lib/session";
 import { getMyProfileCached } from "@/lib/user";
+import { getNextOnboardingRoute } from "@/lib/onboarding";
 
 export default function WelcomePage() {
   const insets = useSafeAreaInsets();
@@ -32,14 +34,27 @@ export default function WelcomePage() {
         duration: 1200,
         easing: Easing.bezier(0.4, 0, 0.2, 1),
         useNativeDriver: true,
-      })
+      }),
     ).start();
 
     const bootstrapApp = async () => {
       const startTime = Date.now();
-      
+
       try {
         setStatusText("Vérification de l'accordage...");
+
+        // Properly pre-load critical local images using Asset.loadAsync
+        void Asset.loadAsync([
+          require("@/assets/images/auth/login-landing.jpg"),
+          require("@/assets/images/landing/landing-1.jpg"),
+          require("@/assets/images/landing/landing-2.jpg"),
+          require("@/assets/images/landing/landing-8.jpg"),
+          require("@/assets/images/landing/landing-7.jpg"),
+          require("@/assets/images/landing/landing-6.jpg"),
+          require("@/assets/images/landing/landing-5.jpg"),
+          require("@/assets/images/landing/landing-4.jpg"),
+        ]);
+
         const token = await getAccessToken();
 
         if (!token) {
@@ -51,13 +66,13 @@ export default function WelcomePage() {
         setStatusText("Récupération de tes réglages...");
         const me = await getMyProfileCached(token);
 
-        // Logique de redirection selon l'état du profil
-        if (!me.profile?.firstName) {
-          finishBootstrap("/name", startTime);
-        } else if (!me.profile?.instruments?.length) {
-          finishBootstrap("/skills", startTime);
+        // Use centralized onboarding logic to find the next missing piece
+        const nextOnboardingStep = getNextOnboardingRoute(me.profile);
+
+        if (nextOnboardingStep) {
+          finishBootstrap(nextOnboardingStep, startTime);
         } else {
-          // Tout est ok -> Dashboard
+          // All good -> Dashboard
           finishBootstrap("/explore", startTime);
         }
       } catch (err) {
@@ -69,7 +84,7 @@ export default function WelcomePage() {
 
     const finishBootstrap = (route: string, startTime: number) => {
       const elapsed = Date.now() - startTime;
-      const minDuration = 2000; // On laisse l'animation au moins 2s pour le look
+      const minDuration = 1500; // 1.5s is enough with preloaded assets
       const delay = Math.max(0, minDuration - elapsed);
 
       setTimeout(() => {
@@ -91,15 +106,15 @@ export default function WelcomePage() {
         colors={["rgba(140, 37, 59, 0.8)", Palette.bgBlack]}
         style={StyleSheet.absoluteFill}
       />
-      
-      <Animated.View 
+
+      <Animated.View
         style={[
-          styles.content, 
-          { 
+          styles.content,
+          {
             opacity: fadeAnim,
             paddingTop: insets.top + 120,
             paddingBottom: insets.bottom + 100,
-          }
+          },
         ]}
       >
         {/* Logo + phrase */}

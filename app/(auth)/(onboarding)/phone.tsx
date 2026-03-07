@@ -203,7 +203,6 @@ export const PhoneStepScreen: React.FC = () => {
               <ButtonLoop
                 label="Fermer"
                 variant="outline"
-                disabled={phone.length < 5}
                 onPress={closeCountryModal}
               />
             </View>

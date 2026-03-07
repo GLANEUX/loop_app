@@ -15,7 +15,7 @@ export type LikeResponse = {
  * Récupère une liste de profils à découvrir
  */
 export async function discoverProfiles(token: string): Promise<MatchingProfile[]> {
-  const data = await apiRequest<any[]>("/discovery/queue", {
+  const data = await apiRequest<any[]>("/matching/discover", {
     method: "GET",
     authToken: token,
   });
@@ -23,51 +23,36 @@ export async function discoverProfiles(token: string): Promise<MatchingProfile[]
   // Map backend profile to MatchingProfile
   return data.map((p) => ({
     ...p,
-    userId: p.id, // In discovery queue, id is the user/profile id
+    userId: p.id, // In discovery, id is the user/profile id
   }));
-}
-
-/**
- * Swipe un utilisateur
- */
-export async function swipeUser(
-  token: string,
-  targetProfileId: string,
-  isLike: boolean,
-): Promise<LikeResponse> {
-  const response = await apiRequest<{
-    swipeId: string;
-    isLike: boolean;
-    createdAt: string;
-    matchCreated: boolean;
-    matchId?: string;
-  }>("/swipes", {
-    method: "POST",
-    authToken: token,
-    body: JSON.stringify({
-      targetProfileId,
-      isLike,
-    }),
-  });
-
-  return {
-    matched: response.matchCreated,
-    matchId: response.matchId,
-  };
 }
 
 /**
  * Like un utilisateur
  */
 export async function likeUser(token: string, targetUserId: string): Promise<LikeResponse> {
-  return swipeUser(token, targetUserId, true);
+  const response = await apiRequest<{
+    matched: boolean;
+    matchId?: string;
+  }>(`/matching/like/${targetUserId}`, {
+    method: "POST",
+    authToken: token,
+  });
+
+  return {
+    matched: response.matched,
+    matchId: response.matchId,
+  };
 }
 
 /**
  * Dislike un utilisateur
  */
 export async function dislikeUser(token: string, targetUserId: string): Promise<{ success: boolean }> {
-  await swipeUser(token, targetUserId, false);
+  await apiRequest<{ success: boolean }>(`/matching/dislike/${targetUserId}`, {
+    method: "POST",
+    authToken: token,
+  });
   return { success: true };
 }
 

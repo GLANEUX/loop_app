@@ -125,11 +125,11 @@ export const LoginScreen: React.FC = () => {
               showErrorText={false}
             />
 
-            <TouchableOpacity
+            {/* <TouchableOpacity
               onPress={() => router.push("/forgot-password")}
             >
               <Text style={styles.forgotText}>Mot de passe oublié ?</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
             <ButtonLoop
               label="Connexion"
@@ -143,9 +143,7 @@ export const LoginScreen: React.FC = () => {
 
             <View style={styles.registerRow}>
               <Text style={styles.registerText}>Pas de compte ? </Text>
-              <TouchableOpacity
-                onPress={() => router.push("/signup")}
-              >
+              <TouchableOpacity onPress={() => router.push("/signup")}>
                 <Text style={styles.registerLink}>S’inscrire</Text>
               </TouchableOpacity>
             </View>

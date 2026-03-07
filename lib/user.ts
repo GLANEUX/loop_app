@@ -129,28 +129,37 @@ export function updateMyAvatar(file: AvatarUploadInput, token: string) {
   });
 }
 
-export function updateMyProfile(payload: ProfileUpdateInput, token: string) {
-  return apiRequest("/user/me/profile", {
+export async function updateMyProfile(payload: ProfileUpdateInput, token: string) {
+  const result = await apiRequest<UserMe>("/user/me/profile", {
     method: "PATCH",
     authToken: token,
     body: JSON.stringify(payload),
   });
+  // Force cache refresh after update
+  await getMyProfileCached(token, true);
+  return result;
 }
 
 export async function updateMyEmail(email: string, token: string) {
-  return apiRequest("/user/me", {
+  const result = await apiRequest<UserMe>("/user/me", {
     method: "PATCH",
     authToken: token,
     body: JSON.stringify({ email }),
   });
+  // Force cache refresh after update
+  await getMyProfileCached(token, true);
+  return result;
 }
 
 export async function updateMyPseudo(pseudo: string, token: string) {
-  return apiRequest("/user/me", {
+  const result = await apiRequest<UserMe>("/user/me", {
     method: "PATCH",
     authToken: token,
     body: JSON.stringify({ pseudo }),
   });
+  // Force cache refresh after update
+  await getMyProfileCached(token, true);
+  return result;
 }
 
 export async function updateMyPassword(
