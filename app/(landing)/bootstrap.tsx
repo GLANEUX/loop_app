@@ -10,10 +10,12 @@ import { Palette, Typography } from "@/constants/theme";
 import { getAccessToken } from "@/lib/session";
 import { getMyProfileCached } from "@/lib/user";
 import { getNextOnboardingRoute } from "@/lib/onboarding";
+import { useAuth } from "@/lib/auth-context";
 
 export default function WelcomePage() {
   const insets = useSafeAreaInsets();
   const [statusText, setStatusText] = useState("Préparation de la scène...");
+  const { signIn } = useAuth();
 
   // Animation du loader (rotation infinie)
   const rotation = useRef(new Animated.Value(0)).current;
@@ -65,6 +67,9 @@ export default function WelcomePage() {
 
         setStatusText("Récupération de tes réglages...");
         const me = await getMyProfileCached(token);
+        
+        // Mettre à jour l'état global avant de continuer
+        await signIn({ token, user: me.user });
 
         // Use centralized onboarding logic to find the next missing piece
         const nextOnboardingStep = getNextOnboardingRoute(me.profile);

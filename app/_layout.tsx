@@ -9,6 +9,7 @@ import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { AuthProvider } from "@/lib/auth-context";
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -39,33 +40,32 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: Palette.bgBlack }}>
-      <ThemeProvider
-        value={{
-          ...DefaultTheme,
-          colors: {
-            ...DefaultTheme.colors,
-            background: Palette.bgBlack,
-          },
-        }}
-      >
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            animation: "ios_from_right",
-            contentStyle: { backgroundColor: Palette.bgBlack },
+      <AuthProvider>
+        <ThemeProvider
+          value={{
+            ...DefaultTheme,
+            colors: {
+              ...DefaultTheme.colors,
+              background: Palette.bgBlack,
+            },
           }}
         >
-          <Stack.Screen name="index" />
-          <Stack.Screen name="(landing)" />
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="(settings)" />
-          <Stack.Screen name="(tabs)" />
-          {/*<Stack.Screen name="(messages)" />
-        <Stack.Screen name="(match)" />
-        <Stack.Screen name="(pro)" />*/}
-        </Stack>
-        <StatusBar style="light" />
-      </ThemeProvider>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              animation: "ios_from_right",
+              contentStyle: { backgroundColor: Palette.bgBlack },
+            }}
+          >
+            <Stack.Screen name="index" />
+            <Stack.Screen name="(landing)" />
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(settings)" />
+            <Stack.Screen name="(tabs)" />
+          </Stack>
+          <StatusBar style="light" />
+        </ThemeProvider>
+      </AuthProvider>
     </GestureHandlerRootView>
   );
 }

@@ -22,6 +22,16 @@ export class ApiRequestError {
 
 const BASE_URL = Env.API_URL;
 
+let globalUnauthorizedHandler: (() => void) | null = null;
+
+/**
+ * Configure un gestionnaire global pour les erreurs 401 (non autorisé).
+ * Utile pour déconnecter l'utilisateur automatiquement.
+ */
+export function setUnauthorizedHandler(handler: (() => void) | null) {
+  globalUnauthorizedHandler = handler;
+}
+
 function buildUrl(path: string) {
   if (!path) return BASE_URL;
   return path.startsWith("/") ? `${BASE_URL}${path}` : `${BASE_URL}/${path}`;
@@ -133,6 +143,12 @@ export async function apiRequest<T>(
   };
   console.log("[api] request", JSON.stringify(requestLog));
   console.log("[api] response", JSON.stringify(responseLog));
+
+  if (response.status === 401) {
+    if (globalUnauthorizedHandler) {
+      globalUnauthorizedHandler();
+    }
+  }
 
   if (!response.ok) {
     const details =

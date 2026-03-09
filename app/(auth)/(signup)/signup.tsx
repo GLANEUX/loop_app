@@ -10,6 +10,7 @@ import { Palette, Typography } from "@/constants/theme";
 import { formatApiError } from "@/lib/api";
 import { register } from "@/lib/auth";
 import { saveSession } from "@/lib/session";
+import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -27,6 +28,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 export const SignupScreen: React.FC = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { signIn } = useAuth();
   const keyboardOffset = Platform.OS === "ios" ? insets.top + 12 : 0;
   const scrollBottomPadding = insets.bottom + 120;
 
@@ -58,6 +60,10 @@ export const SignupScreen: React.FC = () => {
         password,
       });
       await saveSession(session);
+      
+      // Mettre à jour l'état global
+      await signIn({ token: session.accessToken, user: session.user });
+
       router.replace("/name");
     } catch (err) {
       setError(formatApiError(err));

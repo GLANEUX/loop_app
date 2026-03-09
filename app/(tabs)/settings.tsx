@@ -18,8 +18,9 @@ import { Env } from "@/constants/env";
 import { Palette, Typography } from "@/constants/theme";
 import { formatApiError } from "@/lib/api";
 import { logout } from "@/lib/auth";
-import { clearSession, getAccessToken } from "@/lib/session";
+import { getAccessToken } from "@/lib/session";
 import { getMyProfileCached, UserMe } from "@/lib/user";
+import { useAuth } from "@/lib/auth-context";
 import * as FileSystem from "expo-file-system/legacy";
 
 import RightChevronIcon from "@/assets/icons/icons/direction-right-2-outline-white.svg";
@@ -60,6 +61,7 @@ export const ProfileSettingsScreen: React.FC = () => {
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
+  const { signOut } = useAuth();
 
   const handleLogout = async () => {
     if (loggingOut) return;
@@ -72,9 +74,8 @@ export const ProfileSettingsScreen: React.FC = () => {
     } catch (err) {
       Alert.alert("Erreur", formatApiError(err));
     } finally {
-      await clearSession();
+      await signOut();
       setLoggingOut(false);
-      router.replace("/authPage");
     }
   };
 

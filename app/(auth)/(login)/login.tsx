@@ -12,6 +12,7 @@ import { login } from "@/lib/auth";
 import { getOnboardingEntry } from "@/lib/onboarding";
 import { saveSession } from "@/lib/session";
 import { getMyProfileCached } from "@/lib/user";
+import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -29,6 +30,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 export const LoginScreen: React.FC = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { signIn } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -46,15 +48,16 @@ export const LoginScreen: React.FC = () => {
     try {
       const session = await login({ email, password });
       await saveSession(session);
-      try {
-        const me = await getMyProfileCached(session.accessToken, true);
-        const entry = getOnboardingEntry(me.profile);
-        if (entry) {
-          router.replace(entry);
-        } else {
-          router.replace("/explore");
-        }
-      } catch {
+      
+      const me = await getMyProfileCached(session.accessToken, true);
+      
+      // Mettre à jour l'état global
+      await signIn({ token: session.accessToken, user: session.user });
+
+      const entry = getOnboardingEntry(me.profile);
+      if (entry) {
+        router.replace(entry);
+      } else {
         router.replace("/explore");
       }
     } catch (err: any) {
