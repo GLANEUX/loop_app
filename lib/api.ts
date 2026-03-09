@@ -6,13 +6,15 @@ export type ApiErrorPayload = {
   error?: string;
 };
 
-export class ApiRequestError extends Error {
+export class ApiRequestError {
+  name: string;
+  message: string;
   status: number;
   details?: ApiErrorPayload;
 
   constructor(message: string, status: number, details?: ApiErrorPayload) {
-    super(message);
     this.name = "ApiRequestError";
+    this.message = message;
     this.status = status;
     this.details = details;
   }
@@ -104,12 +106,19 @@ export async function apiRequest<T>(
   }
 
   const data = await parseJsonSafe(response);
-  const safeBody =
-    typeof rest.body === "string"
-      ? maskSensitive(JSON.parse(rest.body))
-      : isFormData && rest.body instanceof FormData
-        ? describeFormData(rest.body)
-        : rest.body;
+
+  let safeBody = rest.body;
+  if (typeof rest.body === "string") {
+    try {
+      safeBody = maskSensitive(JSON.parse(rest.body));
+    } catch {
+      safeBody = rest.body;
+    }
+  } else if (isFormData && rest.body instanceof FormData) {
+    safeBody = describeFormData(rest.body);
+  } else {
+    safeBody = maskSensitive(rest.body);
+  }
 
   const requestLog = {
     method: rest.method || "GET",
@@ -141,27 +150,28 @@ export async function apiRequest<T>(
   return data as T;
 }
 
-export function formatApiError(error: unknown) {
-  if (error instanceof ApiRequestError) {
+export function formatApiError(error: any) {
+  if (error?.name === "ApiRequestError") {
+    const apiError = error as ApiRequestError;
     // Erreur réseau (status 0)
-    if (error.status === 0) {
+    if (apiError.status === 0) {
       return "Impossible de joindre le serveur. Vérifiez votre connexion.";
     }
 
-    if (error.status === 401) {
+    if (apiError.status === 401) {
       return "E-mail ou mot de passe incorrect.";
     }
-    if (error.status === 403) {
+    if (apiError.status === 403) {
       return "Action non autorisée.";
     }
-    if (error.status === 429) {
+    if (apiError.status === 429) {
       return "Trop de tentatives. Réessayez plus tard.";
     }
-    if (error.status >= 500) {
+    if (apiError.status >= 500) {
       return "Erreur serveur. Nos musiciens s'en occupent !";
     }
 
-    const details = error.details;
+    const details = apiError.details;
     const message = details?.message;
 
     // Si le message est une simple chaîne, on tente de le rendre plus humain

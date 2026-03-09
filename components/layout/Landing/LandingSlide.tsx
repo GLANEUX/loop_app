@@ -5,6 +5,7 @@ import { FC } from "react";
 import {
   StyleSheet,
   View,
+  ScrollView,
 } from "react-native";
 import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -66,14 +67,15 @@ export const LandingSlide: FC<LandingSlideProps> = ({
         />
       </View>
 
-      <View
-        style={[
+      <ScrollView 
+        contentContainerStyle={[
           styles.content,
           {
             paddingTop: insets.top + 12,
             paddingBottom: insets.bottom + 24,
           },
         ]}
+        showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={FadeIn.delay(100).duration(400)} style={styles.topBar}>
           {showBack ? (
@@ -109,7 +111,7 @@ export const LandingSlide: FC<LandingSlideProps> = ({
             />
           </Animated.View>
         </View>
-      </View>
+      </ScrollView>
     </View>
   );
 };
@@ -120,7 +122,7 @@ const styles = StyleSheet.create({
     backgroundColor: Palette.bgBlack,
   },
   content: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: 24,
     justifyContent: "space-between",
   },
@@ -132,6 +134,7 @@ const styles = StyleSheet.create({
   bottomContent: {
     gap: 32,
     marginBottom: 20,
+    marginTop: 40,
   },
   textBlock: {
     gap: 16,

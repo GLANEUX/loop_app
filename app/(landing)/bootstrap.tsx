@@ -75,9 +75,11 @@ export default function WelcomePage() {
           // All good -> Dashboard
           finishBootstrap("/explore", startTime);
         }
-      } catch (err) {
-        console.error("[Welcome] Bootstrap error:", err);
-        // En cas d'erreur, on renvoie vers la landing pour être sûr
+      } catch (err: any) {
+        if (err?.status !== 401) {
+          console.error("[Welcome] Bootstrap error:", err);
+        }
+        // En cas d'erreur (ou jeton expiré), on renvoie vers la landing pour être sûr
         finishBootstrap("/discover-musicians", startTime);
       }
     };

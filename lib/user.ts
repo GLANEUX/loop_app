@@ -120,8 +120,8 @@ export function updateMyAvatar(file: AvatarUploadInput, token: string) {
         ? String((data as { message?: unknown }).message)
         : `Request failed (${result.status})`;
     throw new ApiRequestError(message, result.status, data as ApiErrorPayload);
-  }).catch((err) => {
-    if (err instanceof ApiRequestError) {
+  }).catch((err: any) => {
+    if (err?.name === "ApiRequestError") {
       throw err;
     }
     console.log("[avatar] error", JSON.stringify({ message: String(err) }));
@@ -173,8 +173,8 @@ export async function updateMyPassword(
       authToken: token,
       body: JSON.stringify({ oldPassword: currentPassword, newPassword }),
     });
-  } catch (err) {
-    if (err instanceof ApiRequestError && [404, 405].includes(err.status)) {
+  } catch (err: any) {
+    if (err?.name === "ApiRequestError" && [404, 405].includes(err.status)) {
       return apiRequest("/auth/change-password", {
         method: "POST",
         authToken: token,

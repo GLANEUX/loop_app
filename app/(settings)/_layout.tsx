@@ -9,6 +9,13 @@ export default function SettingsLayout() {
         animation: "ios_from_right",
         contentStyle: { backgroundColor: Palette.bgBlack },
       }}
-    />
+    >
+      <Stack.Screen 
+        name="user/[id]" 
+        options={{ 
+          animation: "slide_from_bottom" 
+        }} 
+      />
+    </Stack>
   );
 }

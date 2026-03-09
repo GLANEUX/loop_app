@@ -66,8 +66,8 @@ export default function InformationPasswordScreen() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-    } catch (err) {
-      if (err instanceof ApiRequestError && err.status === 401) {
+    } catch (err: any) {
+      if (err?.name === "ApiRequestError" && err.status === 401) {
         setError("Mot de passe actuel invalide.");
       } else {
         setError(formatApiError(err));

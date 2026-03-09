@@ -22,6 +22,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ScrollView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -56,9 +57,10 @@ export const LoginScreen: React.FC = () => {
       } catch {
         router.replace("/explore");
       }
-    } catch (err) {
-      if (err instanceof ApiRequestError) {
-        if (err.status === 401 || err.status === 400) {
+    } catch (err: any) {
+      if (err?.name === "ApiRequestError") {
+        const apiError = err as ApiRequestError;
+        if (apiError.status === 401 || apiError.status === 400) {
           setError("E-mail ou mot de passe invalide.");
           return;
         }
@@ -79,15 +81,20 @@ export const LoginScreen: React.FC = () => {
       style={styles.background}
       resizeMode="cover"
     >
-      <View
-        style={[
-          styles.safeArea,
-          { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 24 },
-        ]}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={styles.container}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={styles.container}
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            {
+              paddingTop: insets.top + 12,
+              paddingBottom: insets.bottom + 24,
+            },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
           {/* HEADER */}
           <View style={styles.header}>
@@ -125,12 +132,6 @@ export const LoginScreen: React.FC = () => {
               showErrorText={false}
             />
 
-            {/* <TouchableOpacity
-              onPress={() => router.push("/forgot-password")}
-            >
-              <Text style={styles.forgotText}>Mot de passe oublié ?</Text>
-            </TouchableOpacity> */}
-
             <ButtonLoop
               label="Connexion"
               variant="primary"
@@ -139,8 +140,6 @@ export const LoginScreen: React.FC = () => {
               style={{ marginTop: 16 }}
             />
 
-            {/* <SocialAuthSection onSelect={() => {}} /> */}
-
             <View style={styles.registerRow}>
               <Text style={styles.registerText}>Pas de compte ? </Text>
               <TouchableOpacity onPress={() => router.push("/signup")}>
@@ -148,8 +147,8 @@ export const LoginScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
           </View>
-        </KeyboardAvoidingView>
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </ImageBackground>
   );
 };
@@ -157,12 +156,12 @@ export const LoginScreen: React.FC = () => {
 const styles = StyleSheet.create({
   background: { flex: 1 },
 
-  safeArea: {
-    flex: 1,
+  container: { flex: 1 },
+
+  scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: 24,
   },
-
-  container: { flex: 1 },
 
   /* HEADER */
   header: {

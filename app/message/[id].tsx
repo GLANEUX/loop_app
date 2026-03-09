@@ -1,9 +1,9 @@
+import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Keyboard,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -12,14 +12,25 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Image } from "expo-image";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 import BackIcon from "@/assets/icons/icons/arrow-right-outline-white.svg";
-import { Palette, Typography } from "@/constants/theme";
-import { getAccessToken, getStoredUser, StoredUser } from "@/lib/session";
-import { getMessages, Message, sendMessage, Thread, getThreads } from "@/lib/messages";
+import TickIcon from "@/assets/icons/icons/tick-outline-white.svg";
+import DoubleTickIcon from "@/assets/icons/icons/tick-double-outline-white.svg";
 import { Env } from "@/constants/env";
+import { Palette, Typography } from "@/constants/theme";
+import {
+  getMessages,
+  getThreads,
+  markAsRead,
+  Message,
+  sendMessage,
+  Thread,
+} from "@/lib/messages";
+import { getAccessToken, getStoredUser, StoredUser } from "@/lib/session";
 
 const fallbackAvatar = require("@/assets/images/landing/landing-1.jpg");
 
@@ -32,7 +43,7 @@ export default function MessageDetailScreen() {
   const [partner, setPartner] = useState<Thread | null>(null);
   const [me, setMe] = useState<StoredUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  
+
   const insets = useSafeAreaInsets();
   const flatListRef = useRef<FlatList>(null);
 
@@ -53,6 +64,16 @@ export default function MessageDetailScreen() {
       const currentThread = threads.find((t) => t.matchId === matchId);
       if (currentThread) {
         setPartner(currentThread);
+        
+        // Mark as read only if there are unread messages AND the last message is from the partner
+        if (
+          currentThread.lastMessage?.id && 
+          currentThread.unreadCount > 0 && 
+          currentThread.lastMessage.authorProfileId === currentThread.profile.id
+        ) {
+          markAsRead(sessionToken, matchId, currentThread.lastMessage.id)
+            .catch(err => console.error("[MessageDetail] Failed to mark as read:", err));
+        }
       }
 
       setMessages(msgsResponse.messages);
@@ -65,18 +86,26 @@ export default function MessageDetailScreen() {
 
   useEffect(() => {
     fetchMatchAndMessages();
-    
+
     // Polling simple pour les nouveaux messages
     const interval = setInterval(() => {
       if (token && matchId) {
-        getMessages(token, matchId, { limit: 20 }).then((res) => {
-          setMessages(res.messages);
-        }).catch(err => console.error("Polling error", err));
+        getMessages(token, matchId, { limit: 20 })
+          .then((res) => {
+            setMessages(res.messages);
+            
+            // Si on reçoit des messages et que le dernier est du partenaire, on le marque comme lu
+            const lastMsg = res.messages[res.messages.length - 1];
+            if (lastMsg && lastMsg.authorProfileId === partner?.profile.id) {
+               markAsRead(token, matchId, lastMsg.id).catch(() => {});
+            }
+          })
+          .catch((err) => console.error("Polling error", err));
       }
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [fetchMatchAndMessages, token, matchId]);
+  }, [fetchMatchAndMessages, token, matchId, partner?.profile.id]);
 
   const handleSend = async () => {
     if (!inputText.trim() || !token || !matchId || sending) return;
@@ -88,7 +117,10 @@ export default function MessageDetailScreen() {
     try {
       const newMessage = await sendMessage(token, matchId, textToSend);
       setMessages((prev) => [...prev, newMessage]);
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+      setTimeout(
+        () => flatListRef.current?.scrollToEnd({ animated: true }),
+        100,
+      );
     } catch (err) {
       console.error("[MessageDetail] Failed to send:", err);
       setInputText(textToSend); // Restore text on failure
@@ -106,16 +138,18 @@ export default function MessageDetailScreen() {
   }
 
   const partnerProfile = partner?.profile;
-  const avatarUri = partnerProfile?.hasAvatar 
+  const avatarUri = partnerProfile?.hasAvatar
     ? `${Env.API_URL}/user/profiles/${partnerProfile.id}/avatar`
     : null;
+
+  const keyboardOffset = Platform.OS === "ios" ? 0 : 0; 
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <KeyboardAvoidingView 
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+        keyboardVerticalOffset={keyboardOffset}
       >
         {/* Header */}
         <View style={styles.header}>
@@ -126,18 +160,31 @@ export default function MessageDetailScreen() {
               style={{ transform: [{ scaleX: -1 }] }}
             />
           </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <Image 
-              source={avatarUri ? { uri: avatarUri, headers: { Authorization: `Bearer ${token}` } } : fallbackAvatar} 
-              style={styles.headerAvatar} 
+          <TouchableOpacity
+            style={styles.headerCenter}
+            onPress={() =>
+              partnerProfile?.id && router.push(`/user/${partnerProfile.id}`)
+            }
+          >
+            <Image
+              source={
+                avatarUri
+                  ? {
+                      uri: avatarUri,
+                      headers: { Authorization: `Bearer ${token}` },
+                    }
+                  : fallbackAvatar
+              }
+              style={styles.headerAvatar}
             />
             <View>
               <Text style={styles.headerName}>
-                {partnerProfile?.firstName || partnerProfile?.pseudo || "Utilisateur"}
+                {partnerProfile?.firstName ||
+                  partnerProfile?.pseudo ||
+                  "Utilisateur"}
               </Text>
-              <Text style={styles.headerStatus}>En ligne</Text>
             </View>
-          </View>
+          </TouchableOpacity>
           <View style={styles.headerMenu} />
         </View>
         <View style={styles.headerDivider} />
@@ -148,7 +195,9 @@ export default function MessageDetailScreen() {
           data={messages}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.contentContainer}
-          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
+          onContentSizeChange={() =>
+            flatListRef.current?.scrollToEnd({ animated: false })
+          }
           keyboardDismissMode="on-drag"
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
@@ -168,10 +217,12 @@ export default function MessageDetailScreen() {
             }
 
             return (
-              <View style={[
-                styles.bubble, 
-                isMe ? styles.bubbleRight : styles.bubbleLeft
-              ]}>
+              <View
+                style={[
+                  styles.bubble,
+                  isMe ? styles.bubbleRight : styles.bubbleLeft,
+                ]}
+              >
                 {!isMe && (
                   <Text style={styles.bubbleName}>
                     {partnerProfile?.firstName || "Partenaire"}
@@ -180,9 +231,37 @@ export default function MessageDetailScreen() {
                 <Text style={isMe ? styles.bubbleText : styles.bubbleTextDark}>
                   {item.body}
                 </Text>
-                <Text style={isMe ? styles.timeText : styles.timeTextDark}>
-                  {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </Text>
+                <View style={styles.bubbleFooter}>
+                  <Text style={isMe ? styles.timeText : styles.timeTextDark}>
+                    {new Date(item.createdAt).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </Text>
+                  {isMe && (
+                    <View style={styles.statusContainer}>
+                      {item.status === "read" ? (
+                        <DoubleTickIcon
+                          width={14}
+                          height={14}
+                          color={Palette.bgWhite}
+                        />
+                      ) : item.status === "delivered" ? (
+                        <DoubleTickIcon
+                          width={14}
+                          height={14}
+                          color="rgba(255,255,255,0.4)"
+                        />
+                      ) : (
+                        <TickIcon
+                          width={14}
+                          height={14}
+                          color="rgba(255,255,255,0.4)"
+                        />
+                      )}
+                    </View>
+                  )}
+                </View>
               </View>
             );
           }}
@@ -199,8 +278,11 @@ export default function MessageDetailScreen() {
               onChangeText={setInputText}
               multiline
             />
-            <TouchableOpacity 
-              style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]} 
+            <TouchableOpacity
+              style={[
+                styles.sendButton,
+                !inputText.trim() && styles.sendButtonDisabled,
+              ]}
               onPress={handleSend}
               disabled={!inputText.trim() || sending}
             >
@@ -262,10 +344,6 @@ const styles = StyleSheet.create({
     ...Typography.bodyBold,
     color: Palette.bgWhite,
   },
-  headerStatus: {
-    ...Typography.smallLight,
-    color: Palette.grey300,
-  },
   headerMenu: {
     width: 28,
     height: 28,
@@ -309,18 +387,24 @@ const styles = StyleSheet.create({
     ...Typography.bodyMedium,
     color: Palette.black,
   },
+  bubbleFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 4,
+    marginTop: 4,
+  },
+  statusContainer: {
+    marginTop: 2,
+  },
   timeText: {
-    marginTop: 6,
     ...Typography.smallLight,
     color: "rgba(255,255,255,0.7)",
-    textAlign: "right",
     fontSize: 10,
   },
   timeTextDark: {
-    marginTop: 6,
     ...Typography.smallLight,
     color: Palette.grey600,
-    textAlign: "right",
     fontSize: 10,
   },
   systemMessage: {
@@ -355,7 +439,7 @@ const styles = StyleSheet.create({
     backgroundColor: Palette.bgBlack,
     paddingTop: 10,
     paddingHorizontal: 24,
-    paddingBottom: Platform.OS === 'android' ? 10 : 0, // Insets handles bottom on iOS via SafeAreaView
+    paddingBottom: Platform.OS === "android" ? 10 : 0, 
   },
   inputBar: {
     backgroundColor: Palette.bgWhite,
@@ -365,7 +449,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    marginBottom: 10,
   },
   input: {
     flex: 1,

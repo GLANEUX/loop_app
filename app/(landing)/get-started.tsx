@@ -4,7 +4,7 @@ import { ButtonLoop, TopNavButton } from "@/components/ui";
 import { Palette, Typography } from "@/constants/theme";
 import { router } from "expo-router";
 import React from "react";
-import { StatusBar, StyleSheet, View, Text } from "react-native";
+import { StatusBar, StyleSheet, View, Text, ScrollView } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -41,14 +41,15 @@ export const LandingFinal: React.FC = () => {
         />
       </View>
 
-      <View
-        style={[
+      <ScrollView
+        contentContainerStyle={[
           styles.content,
           {
             paddingTop: insets.top + 12,
             paddingBottom: insets.bottom + 24,
           },
         ]}
+        showsVerticalScrollIndicator={false}
       >
         <View>
           <TopNavButton
@@ -80,7 +81,7 @@ export const LandingFinal: React.FC = () => {
             onPress={handleStartPress}
           />
         </View>
-      </View>
+      </ScrollView>
     </View>
   );
 };
@@ -91,7 +92,7 @@ const styles = StyleSheet.create({
     backgroundColor: Palette.bgBlack,
   },
   content: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: 28,
     justifyContent: "space-between",
   },
@@ -100,6 +101,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     gap: 40,
+    marginVertical: 40,
   },
   heroContainer: {
     width: "100%",

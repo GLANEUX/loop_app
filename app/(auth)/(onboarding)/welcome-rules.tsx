@@ -3,7 +3,7 @@ import { ButtonLoop } from "@/components/ui";
 import { Palette, Typography } from "@/constants/theme";
 import { useRouter } from "expo-router";
 import React from "react";
-import { StyleSheet, Text, View, Image } from "react-native";
+import { StyleSheet, Text, View, Image, ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 
@@ -22,11 +22,12 @@ export const WelcomeRulesScreen: React.FC = () => {
         style={StyleSheet.absoluteFill}
       />
       
-      <View
-        style={[
-          styles.content,
+      <ScrollView 
+        contentContainerStyle={[
+          styles.scrollContent,
           { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 },
         ]}
+        showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
           <Image
@@ -85,7 +86,7 @@ export const WelcomeRulesScreen: React.FC = () => {
         <View style={styles.buttonWrapper}>
           <ButtonLoop label="C'est parti !" onPress={handleStart} withArrow />
         </View>
-      </View>
+      </ScrollView>
     </View>
   );
 };
@@ -95,8 +96,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Palette.bgBlack,
   },
-  content: {
-    flex: 1,
+  scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: 28,
     justifyContent: "space-between",
   },
