@@ -2,6 +2,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -19,43 +20,129 @@ import {
 import BackIcon from "@/assets/icons/icons/direction-left-2-outline-white.svg";
 import ChevronRightIcon from "@/assets/icons/icons/direction-right-2-outline-white.svg";
 import EditAvatarIcon from "@/assets/icons/icons/edit-outline-white.svg";
+import TrashIcon from "@/assets/icons/icons/close-outline-white.svg";
 import { Env } from "@/constants/env";
 import { Palette, Typography } from "@/constants/theme";
 import { formatApiError } from "@/lib/api";
 import { getAccessToken } from "@/lib/session";
-import { getMyProfileCached, updateMyAvatar, UserMe } from "@/lib/user";
+import { getMyProfileCached, getMyProfileDetails, updateMyAvatar, UserMe, UserProfile, getInstrumentLevelLabel } from "@/lib/user";
+import { deleteMedia, getMediaUrl } from "@/lib/media";
+import { Audio } from "expo-av";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system/legacy";
+
+import PlayIcon from "@/assets/icons/icons/mdi-play-1.svg";
+
+const PauseIcon = ({ width = 24, height = 24, color = "white" }: { width?: number; height?: number; color?: string }) => (
+  <View style={{ width, height, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 3 }}>
+    <View style={{ width: 4, height: 14, backgroundColor: color, borderRadius: 2 }} />
+    <View style={{ width: 4, height: 14, backgroundColor: color, borderRadius: 2 }} />
+  </View>
+);
 
 const fallbackAvatar = require("@/assets/images/landing/landing-9.jpg");
 
 export default function ProfileEditScreen() {
   const insets = useSafeAreaInsets();
   const [user, setUser] = useState<UserMe | null>(null);
+  const [detailedProfile, setDetailedProfile] = useState<UserProfile | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [avatarLocalUri, setAvatarLocalUri] = useState<string | null>(null);
-  const [loadingProfile, setLoadingProfile] = useState(true);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [avatarLoading, setAvatarLoading] = useState(false);
+  const [deletingMediaId, setDeletingMediaId] = useState<string | null>(null);
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [playingId, setPlayingId] = useState<string | null>(null);
 
   const fetchProfile = useCallback(async (force = false) => {
-    setLoadingProfile(true);
     setProfileError(null);
     try {
       const token = await getAccessToken();
       if (!token) {
-        setLoadingProfile(false);
         return;
       }
       setToken(token);
-      const data = await getMyProfileCached(token, force);
-      setUser(data);
+      
+      const [userData, profileData] = await Promise.all([
+        getMyProfileCached(token, force),
+        getMyProfileDetails(token)
+      ]);
+
+      setUser(userData);
+      setDetailedProfile(profileData);
+    } catch (err) {
+      setProfileError(formatApiError(err));
+    }
+  }, []);
+
+  const handleDeleteMedia = async (mediaId: string) => {
+    if (!token || deletingMediaId) return;
+    
+    setDeletingMediaId(mediaId);
+    try {
+      await deleteMedia(mediaId, token);
+      if (playingId === mediaId) {
+        await stopSound();
+      }
+      await fetchProfile(true);
     } catch (err) {
       setProfileError(formatApiError(err));
     } finally {
-      setLoadingProfile(false);
+      setDeletingMediaId(null);
     }
-  }, []);
+  };
+
+  const stopSound = async () => {
+    if (sound) {
+      await sound.unloadAsync();
+      setSound(null);
+      setPlayingId(null);
+    }
+  };
+
+  const handlePlaySound = async (mediaId: string) => {
+    try {
+      if (playingId === mediaId) {
+        await stopSound();
+        return;
+      }
+
+      if (sound) {
+        await stopSound();
+      }
+
+      if (!token) return;
+
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        { 
+          uri: getMediaUrl(mediaId),
+          headers: { Authorization: `Bearer ${token}` }
+        },
+        { shouldPlay: true }
+      );
+
+      setSound(newSound);
+      setPlayingId(mediaId);
+
+      newSound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          setPlayingId(null);
+          setSound(null);
+        }
+      });
+    } catch (error) {
+      console.error("Erreur lecture audio:", error);
+      setProfileError("Impossible de lire l'extrait audio.");
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (sound) {
+        sound.unloadAsync();
+      }
+    };
+  }, [sound]);
 
   useFocusEffect(
     useCallback(() => {
@@ -63,7 +150,10 @@ export default function ProfileEditScreen() {
     }, [fetchProfile]),
   );
 
-  const profile = user?.profile;
+  const profile = detailedProfile || user?.profile;
+  const media = [...(profile?.media || [])].sort((a, b) => 
+    new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+  );
   const pseudo = user?.pseudo || "";
   const bio = profile?.bio || "Non renseignée";
   let birthDateDisplay = "Non renseignée";
@@ -76,7 +166,9 @@ export default function ProfileEditScreen() {
 
   const instruments = (profile?.instruments ?? [])
     .map((item) =>
-      item.level ? `${item.instrument} · ${item.level}` : item.instrument,
+      item.level
+        ? `${item.instrument} · ${getInstrumentLevelLabel(item.level)}`
+        : item.instrument,
     )
     .filter(Boolean);
   const genres = (profile?.genres ?? []).filter(Boolean);
@@ -299,6 +391,58 @@ export default function ProfileEditScreen() {
             </View>
           </View>
 
+          <View style={styles.section}>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionHeader}>Mes extraits musicaux</Text>
+              <TouchableOpacity
+                onPress={() => router.push("/media-edit")}
+                style={styles.editSectionButton}
+              >
+                <EditAvatarIcon width={16} height={16} />
+                <Text style={styles.editSectionText}>Ajouter</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.card}>
+              {media.length > 0 ? (
+                media.map((item, index) => (
+                  <View key={item.id} style={[styles.row, index === media.length - 1 && styles.rowLast]}>
+                    <TouchableOpacity 
+                      style={styles.playButtonMini} 
+                      onPress={() => handlePlaySound(item.id)}
+                    >
+                      {playingId === item.id ? (
+                        <PauseIcon width={16} height={16} color={Palette.primary} />
+                      ) : (
+                        <PlayIcon width={20} height={20} color={Palette.bgWhite} />
+                      )}
+                    </TouchableOpacity>
+                    <View style={styles.rowLeft}>
+                      <Text style={styles.rowLabel} numberOfLines={1}>{item.title}</Text>
+                      <Text style={styles.mediaTypeLabel}>{item.type.toUpperCase()}</Text>
+                    </View>
+                    {index !== 0 && (
+                      <TouchableOpacity 
+                        onPress={() => handleDeleteMedia(item.id)}
+                        disabled={deletingMediaId === item.id}
+                        style={styles.deleteButton}
+                      >
+                        {deletingMediaId === item.id ? (
+                          <ActivityIndicator size="small" color={Palette.primary} />
+                        ) : (
+                          <TrashIcon width={20} height={20} color={Palette.primary} />
+                        )}
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                ))
+              ) : (
+                <View style={styles.emptyMediaCard}>
+                  <Text style={styles.emptyText}>Aucun extrait musical ajouté.</Text>
+                </View>
+              )}
+            </View>
+          </View>
+
           <View style={styles.footerSpacer} />
         </ScrollView>
       </KeyboardAvoidingView>
@@ -393,7 +537,7 @@ const styles = StyleSheet.create({
   avatar: {
     width: 100,
     height: 100,
-    borderRadius: 24,
+    borderRadius: 50,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.1)",
   },
@@ -508,6 +652,28 @@ const styles = StyleSheet.create({
     color: Palette.grey600,
     fontStyle: "italic",
     marginLeft: 4,
+  },
+  emptyMediaCard: {
+    padding: 20,
+    alignItems: "center",
+  },
+  mediaTypeLabel: {
+    ...Typography.smallLight,
+    color: Palette.grey300,
+    fontSize: 10,
+    marginTop: 2,
+  },
+  playButtonMini: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  deleteButton: {
+    padding: 4,
   },
   errorBanner: {
     backgroundColor: "rgba(238, 40, 59, 0.1)",

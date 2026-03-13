@@ -1,6 +1,32 @@
 import { Env } from "@/constants/env";
 import { ApiErrorPayload, ApiRequestError, apiRequest } from "@/lib/api";
 import * as FileSystem from "expo-file-system/legacy";
+import { Media } from "./media";
+
+export enum InstrumentLevel {
+  Beginner = "Débutant",
+  Intermediate = "Intermédiaire",
+  Advanced = "Avancé",
+  Professional = "Expert",
+}
+
+/**
+ * Retourne le label d'un niveau d'instrument.
+ * Gère les anciennes valeurs en anglais si nécessaire.
+ */
+export function getInstrumentLevelLabel(level: string): string {
+  if (Object.values(InstrumentLevel).includes(level as InstrumentLevel)) {
+    return level;
+  }
+  // Mapping pour les anciennes valeurs
+  const mapping: Record<string, string> = {
+    Beginner: InstrumentLevel.Beginner,
+    Intermediate: InstrumentLevel.Intermediate,
+    Advanced: InstrumentLevel.Advanced,
+    Professional: InstrumentLevel.Professional,
+  };
+  return mapping[level] || level;
+}
 
 export type ProfileUpdateInput = {
   email?: string;
@@ -14,6 +40,13 @@ export type ProfileUpdateInput = {
   isPublic?: boolean;
   genres?: string[];
   instruments?: Array<{ instrument: string; level: string }>;
+};
+
+export type AudioMedia = {
+  id: string;
+  title?: string | null;
+  mimeType: string;
+  url: string;
 };
 
 export type UserProfile = {
@@ -34,6 +67,8 @@ export type UserProfile = {
   deletedAt?: string | null;
   genres?: string[] | null;
   instruments?: Array<{ instrument: string; level: string }> | null;
+  media?: Media[] | null;
+  audio?: AudioMedia[] | null;
 };
 
 export type UserMe = {
@@ -61,6 +96,27 @@ export type AvatarUploadInput = {
 
 export function getMyProfile(token: string) {
   return apiRequest<UserMe>("/user/me", {
+    method: "GET",
+    authToken: token,
+  });
+}
+
+/**
+ * Récupère le profil complet et détaillé de l'utilisateur connecté
+ * (inclut les médias, instruments, genres, etc.)
+ */
+export function getMyProfileDetails(token: string) {
+  return apiRequest<UserProfile>("/user/me/profile", {
+    method: "GET",
+    authToken: token,
+  });
+}
+
+/**
+ * Récupère le profil public d'un autre utilisateur
+ */
+export function getUserProfile(profileId: string, token: string) {
+  return apiRequest<UserProfile>(`/user/profiles/${profileId}`, {
     method: "GET",
     authToken: token,
   });

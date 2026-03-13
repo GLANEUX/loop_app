@@ -57,7 +57,6 @@ export const LandingSlide: FC<LandingSlideProps> = ({
           source={image}
           style={StyleSheet.absoluteFill}
           contentFit="cover"
-          transition={300}
           cachePolicy="memory-disk"
         />
         <LinearGradient

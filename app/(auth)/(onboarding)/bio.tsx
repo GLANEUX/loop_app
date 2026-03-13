@@ -51,7 +51,7 @@ export const BioScreen: React.FC = () => {
       }
 
       await updateMyProfile({ bio: trimmed }, token);
-      router.push("/welcome-rules");
+      router.push("/upload-tracks");
     } catch (err) {
       setError(formatApiError(err));
     } finally {
@@ -62,7 +62,7 @@ export const BioScreen: React.FC = () => {
   return (
     <OnboardingLayout
       imageSource={require("@/assets/images/auth/background-4.png")}
-      progress={0.9}
+      progress={0.8}
     >
       <Text style={styles.title}>Ta bio</Text>
       <Text style={styles.subtitle}>

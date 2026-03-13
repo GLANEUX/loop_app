@@ -52,14 +52,9 @@ export const LoginScreen: React.FC = () => {
       const me = await getMyProfileCached(session.accessToken, true);
       
       // Mettre à jour l'état global
-      await signIn({ token: session.accessToken, user: session.user });
+      await signIn({ token: session.accessToken, user: session.user as any });
 
-      const entry = getOnboardingEntry(me.profile);
-      if (entry) {
-        router.replace(entry);
-      } else {
-        router.replace("/explore");
-      }
+      // Redirection gérée par AuthContext
     } catch (err: any) {
       if (err?.name === "ApiRequestError") {
         const apiError = err as ApiRequestError;

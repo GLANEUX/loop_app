@@ -8,7 +8,7 @@ import { Asset } from "expo-asset";
 
 import { Palette, Typography } from "@/constants/theme";
 import { getAccessToken } from "@/lib/session";
-import { getMyProfileCached } from "@/lib/user";
+import { getMyProfileDetails } from "@/lib/user";
 import { getNextOnboardingRoute } from "@/lib/onboarding";
 import { useAuth } from "@/lib/auth-context";
 
@@ -66,13 +66,14 @@ export default function WelcomePage() {
         }
 
         setStatusText("Récupération de tes réglages...");
-        const me = await getMyProfileCached(token);
+        // Use getMyProfileDetails to get the full profile including media
+        const profileData = await getMyProfileDetails(token);
         
         // Mettre à jour l'état global avant de continuer
-        await signIn({ token, user: me.user });
+        await signIn({ token, user: { profile: profileData } as any });
 
         // Use centralized onboarding logic to find the next missing piece
-        const nextOnboardingStep = getNextOnboardingRoute(me.profile);
+        const nextOnboardingStep = getNextOnboardingRoute(profileData);
 
         if (nextOnboardingStep) {
           finishBootstrap(nextOnboardingStep, startTime);
@@ -81,10 +82,17 @@ export default function WelcomePage() {
           finishBootstrap("/explore", startTime);
         }
       } catch (err: any) {
+        if (err?.status === 0) {
+          // Erreur réseau (serveur injoignable)
+          console.error("[Welcome] Server unreachable:", err);
+          finishBootstrap("/offline", startTime);
+          return;
+        }
+
         if (err?.status !== 401) {
           console.error("[Welcome] Bootstrap error:", err);
         }
-        // En cas d'erreur (ou jeton expiré), on renvoie vers la landing pour être sûr
+        // En cas d'erreur de session (401), on renvoie vers la landing
         finishBootstrap("/discover-musicians", startTime);
       }
     };

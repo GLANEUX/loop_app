@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
   avatar: {
     width: 110,
     height: 110,
-    borderRadius: 20,
+    borderRadius: 55,
   },
   userInfoWrap: {
     marginLeft: 16,

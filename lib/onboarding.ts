@@ -10,6 +10,7 @@ export const OnboardingRoutes = {
   skills: "/(auth)/(onboarding)/skills",
   avatar: "/(auth)/(onboarding)/avatar",
   bio: "/(auth)/(onboarding)/bio",
+  uploadTracks: "/(auth)/(onboarding)/upload-tracks",
   welcomeRules: "/(auth)/(onboarding)/welcome-rules",
 } as const;
 
@@ -23,6 +24,7 @@ const OnboardingOrder = [
   OnboardingRoutes.skills,
   OnboardingRoutes.avatar,
   OnboardingRoutes.bio,
+  OnboardingRoutes.uploadTracks,
   OnboardingRoutes.welcomeRules,
 ] as const;
 
@@ -82,6 +84,12 @@ export function getNextOnboardingRoute(profile?: UserProfile | null) {
   if (isBlank(profile.bio)) {
     return OnboardingRoutes.bio;
   }
+  
+  const hasAudio = (profile.audio && profile.audio.length > 0) || (profile.media && profile.media.some(m => m.type === "audio" || m.type === "video"));
+  if (!hasAudio) {
+    return OnboardingRoutes.uploadTracks;
+  }
+
   return null;
 }
 

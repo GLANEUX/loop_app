@@ -5,7 +5,7 @@ import { Palette, Typography } from "@/constants/theme";
 import { formatApiError } from "@/lib/api";
 import { getAccessToken } from "@/lib/session";
 import { updateMyAvatar } from "@/lib/user";
-import * as DocumentPicker from "expo-document-picker";
+import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -26,10 +26,17 @@ export const AvatarScreen: React.FC = () => {
 
   const handlePickImage = async () => {
     try {
-      const result = await DocumentPicker.getDocumentAsync({
-        multiple: false,
-        copyToCacheDirectory: true,
-        type: ["image/*"],
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        setError("La permission d'accès aux photos est requise.");
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
       });
 
       if (result.canceled) return;
@@ -41,20 +48,13 @@ export const AvatarScreen: React.FC = () => {
       }
 
       const originalUri = asset.uri;
-      let finalUri = originalUri;
-      const fileName = asset.name ?? `avatar-${Date.now()}`;
+      const fileName = asset.fileName ?? `avatar-${Date.now()}.jpg`;
 
-      if (originalUri.startsWith("content://") && FileSystem.cacheDirectory) {
-        const dest = `${FileSystem.cacheDirectory}${fileName}`;
-        await FileSystem.copyAsync({ from: originalUri, to: dest });
-        finalUri = dest;
-      }
-
-      const info = await FileSystem.getInfoAsync(finalUri);
+      const info = await FileSystem.getInfoAsync(originalUri);
 
       setSelected({
         name: fileName,
-        uri: finalUri,
+        uri: originalUri,
         type: asset.mimeType ?? "image/jpeg",
         size: info.exists ? info.size ?? null : null,
       });

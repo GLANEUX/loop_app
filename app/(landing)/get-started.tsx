@@ -30,9 +30,7 @@ export const LandingFinal: React.FC = () => {
           source={require("@/assets/images/auth/login-landing.jpg")}
           style={StyleSheet.absoluteFill}
           contentFit="cover"
-          transition={0}
           priority="high"
-          placeholder="L025_#00000000"
         />
         <LinearGradient
           colors={["rgba(0,0,0,0.4)", "rgba(0,0,0,0.7)", Palette.bgBlack]}
@@ -50,6 +48,7 @@ export const LandingFinal: React.FC = () => {
           },
         ]}
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews={true}
       >
         <View>
           <TopNavButton

@@ -6,7 +6,7 @@ import { Palette, Typography } from "@/constants/theme";
 import { formatApiError } from "@/lib/api";
 import { getInstruments, Instrument } from "@/lib/catalog";
 import { getAccessToken } from "@/lib/session";
-import { getMyProfileCached, updateMyProfile } from "@/lib/user";
+import { getMyProfileCached, InstrumentLevel, updateMyProfile } from "@/lib/user";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -76,7 +76,7 @@ export const SkillsScreen: React.FC = () => {
       const match = instruments.find((inst) => inst.name === item.instrument);
       if (!match) continue;
       nextSelected.push(match.id);
-      nextLevels[match.id] = item.level || "Intermediate";
+      nextLevels[match.id] = item.level || InstrumentLevel.Intermediate;
     }
 
     if (nextSelected.length) {
@@ -103,7 +103,7 @@ export const SkillsScreen: React.FC = () => {
         return rest;
       }
       if (!prev[id]) {
-        return { ...prev, [id]: "Intermediate" };
+        return { ...prev, [id]: InstrumentLevel.Intermediate };
       }
       return prev;
     });
@@ -125,7 +125,7 @@ export const SkillsScreen: React.FC = () => {
         if (!instrument) return null;
         return {
           instrument: instrument.name,
-          level: levelsById[id] || "Intermediate",
+          level: levelsById[id] || InstrumentLevel.Intermediate,
         };
       })
       .filter(Boolean) as { instrument: string; level: string }[];
@@ -179,17 +179,12 @@ export const SkillsScreen: React.FC = () => {
           {selected.map((id) => {
             const instrument = instruments.find((item) => item.id === id);
             if (!instrument) return null;
-            const current = levelsById[id] || "Intermediate";
+            const current = levelsById[id] || InstrumentLevel.Intermediate;
             return (
               <View key={id} style={styles.levelRow}>
                 <Text style={styles.levelLabel}>{instrument.name}</Text>
                 <View style={styles.levelOptions}>
-                  {[
-                    "Beginner",
-                    "Intermediate",
-                    "Advanced",
-                    "Professional",
-                  ].map((level) => (
+                  {Object.values(InstrumentLevel).map((level) => (
                     <TagChip
                       key={level}
                       label={level}

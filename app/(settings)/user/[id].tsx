@@ -1,4 +1,4 @@
-import ProfileScreenContent from "@/components/layout/profile/ProfileScreenContent";
+import UserProfileContent from "@/components/layout/profile/UserProfileContent";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 export default function UserProfileScreen() {
@@ -6,9 +6,11 @@ export default function UserProfileScreen() {
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const profileId = Array.isArray(params.id) ? params.id[0] : params.id;
 
+  if (!profileId) return null;
+
   return (
-    <ProfileScreenContent
-      profileId={profileId ?? null}
+    <UserProfileContent
+      profileId={profileId}
       onBack={() => router.back()}
     />
   );

@@ -64,7 +64,8 @@ export const SignupScreen: React.FC = () => {
       // Mettre à jour l'état global
       await signIn({ token: session.accessToken, user: session.user });
 
-      router.replace("/name");
+      // La redirection vers l'onboarding est maintenant gérée globalement
+      // par le AuthContext dès que l'état 'user' est mis à jour.
     } catch (err) {
       setError(formatApiError(err));
     } finally {

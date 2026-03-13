@@ -1,13 +1,5 @@
-import ProfileScreenContent from "@/components/layout/profile/ProfileScreenContent";
-import { useRouter } from "expo-router";
+import MyProfileContent from "@/components/layout/profile/MyProfileContent";
 
 export default function ProfileScreen() {
-  const router = useRouter();
-
-  return (
-    <ProfileScreenContent
-      profileId="me"
-      onBack={() => router.back()}
-    />
-  );
+  return <MyProfileContent />;
 }

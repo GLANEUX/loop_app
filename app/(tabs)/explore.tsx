@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -10,16 +10,6 @@ import {
 } from "react-native";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import Animated, {
-  Extrapolation,
-  interpolate,
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { LinearGradient } from "expo-linear-gradient";
@@ -32,15 +22,112 @@ import { discoverProfiles, dislikeUser, likeUser, MatchingProfile } from "@/lib/
 import { getAccessToken } from "@/lib/session";
 import { Env } from "@/constants/env";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.28;
-const EXIT_X = SCREEN_WIDTH * 1.2;
+import { Audio, AVPlaybackStatus } from "expo-av";
+import { getMediaUrl } from "@/lib/media";
 
-type SwipeDirection = "left" | "right";
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const fallbackAvatar = require("@/assets/images/landing/landing-7.jpg");
 
-function ExploreCard({ profile, token }: { profile: MatchingProfile; token?: string | null }) {
+const PauseIcon = ({ width = 24, height = 24, color = "white" }: { width?: number; height?: number; color?: string }) => (
+  <View style={{ width, height, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 3 }}>
+    <View style={{ width: 4, height: 14, backgroundColor: color, borderRadius: 2 }} />
+    <View style={{ width: 4, height: 14, backgroundColor: color, borderRadius: 2 }} />
+  </View>
+);
+
+function formatTime(millis: number) {
+  const totalSeconds = millis / 1000;
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = Math.floor(totalSeconds % 60);
+  return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
+}
+
+function ExploreCard({ 
+  profile, 
+  token,
+  onPressImage
+}: { 
+  profile: MatchingProfile; 
+  token?: string | null;
+  onPressImage?: () => void;
+}) {
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [position, setPosition] = useState(0);
+  const [duration, setDuration] = useState(0);
+
+  const firstAudio = useMemo(() => {
+    if (profile.audio && profile.audio.length > 0) {
+      return profile.audio[0];
+    }
+    return profile.media?.find((m) => m.type === "audio");
+  }, [profile.audio, profile.media]);
+
+  const onPlaybackStatusUpdate = (status: AVPlaybackStatus) => {
+    if (status.isLoaded) {
+      setPosition(status.positionMillis);
+      setDuration(status.durationMillis || 0);
+      setIsPlaying(status.isPlaying);
+      if (status.didJustFinish) {
+        setIsPlaying(false);
+        setPosition(0);
+      }
+    }
+  };
+
+  const handlePlayPause = async () => {
+    try {
+      if (!firstAudio) return;
+      if (!token) return;
+
+      if (sound) {
+        if (isPlaying) {
+          await sound.pauseAsync();
+        } else {
+          await sound.playAsync();
+        }
+        return;
+      }
+
+      const mediaUrl = "url" in firstAudio && firstAudio.url 
+        ? (firstAudio.url.startsWith("http") ? firstAudio.url : `${Env.API_URL}${firstAudio.url}`)
+        : getMediaUrl(firstAudio.id);
+
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        { 
+          uri: mediaUrl,
+          headers: { Authorization: `Bearer ${token}` }
+        },
+        { shouldPlay: true },
+        onPlaybackStatusUpdate
+      );
+      setSound(newSound);
+    } catch (error) {
+      console.error("[ExploreCard] Error playing discover audio:", error);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (sound) {
+        sound.unloadAsync();
+      }
+    };
+  }, [sound]);
+
+  useEffect(() => {
+    if (sound) {
+      sound.unloadAsync();
+      setSound(null);
+      setIsPlaying(false);
+      setPosition(0);
+      setDuration(0);
+    }
+  }, [profile.userId]);
+
+  const progress = duration > 0 ? (position / duration) * 100 : 0;
+
   const avatarUriBase =
     profile?.hasAvatar === false
       ? null
@@ -50,41 +137,57 @@ function ExploreCard({ profile, token }: { profile: MatchingProfile; token?: str
           ? `${Env.API_URL}/user/profiles/${profile.userId}/avatar`
           : null;
 
+  const cacheBreaker = profile?.updatedAt
+    ? `?v=${new Date(profile.updatedAt).getTime()}`
+    : "";
+
   const avatarSource = avatarUriBase
     ? {
-        uri: avatarUriBase,
+        uri: `${avatarUriBase}${avatarUriBase.includes("?") ? "&" : "?"}${cacheBreaker}`.replace(/[?&]$/, ""),
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       }
     : fallbackAvatar;
 
   return (
     <View style={styles.card}>
-      <View style={styles.cardInner}>
+      <TouchableOpacity 
+        style={styles.cardInner} 
+        activeOpacity={0.9} 
+        onPress={onPressImage}
+      >
         <Image 
           source={avatarSource} 
           style={styles.cover}
           contentFit="cover"
-          transition={200}
           cachePolicy="memory-disk"
         />
         <LinearGradient
           colors={["transparent", "rgba(0,0,0,0.7)"]}
           style={StyleSheet.absoluteFill}
         />
-      </View>
+      </TouchableOpacity>
 
       <View style={styles.progressRow}>
         <View style={styles.progressTrack}>
-          <View style={styles.progressFill} />
+          <View style={[styles.progressFill, { width: `${progress}%` }]} />
         </View>
         <View style={styles.progressTimes}>
-          <Text style={styles.timeText}>0:15</Text>
-          <Text style={styles.timeText}>0:45</Text>
+          <Text style={styles.timeText}>{formatTime(position)}</Text>
+          <Text style={styles.timeText}>{formatTime(duration)}</Text>
         </View>
       </View>
 
-      <TouchableOpacity style={styles.playButton} activeOpacity={0.85}>
-        <PlayIcon width={22} height={22} />
+      <TouchableOpacity 
+        style={styles.playButton} 
+        activeOpacity={0.85}
+        onPress={handlePlayPause}
+        disabled={!firstAudio}
+      >
+        {isPlaying ? (
+          <PauseIcon width={24} height={24} color="white" />
+        ) : (
+          <PlayIcon width={22} height={22} />
+        )}
       </TouchableOpacity>
     </View>
   );
@@ -97,9 +200,6 @@ export default function ExploreTabScreen() {
   const [token, setToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
-
-  const translateX = useSharedValue(0);
-  const translateY = useSharedValue(0);
 
   const currentProfile = profiles[currentIndex];
 
@@ -115,6 +215,16 @@ export default function ExploreTabScreen() {
       const data = await discoverProfiles(sessionToken);
       setProfiles(data);
       setCurrentIndex(0);
+
+      if (data.length > 0) {
+        const uris = data.map(p => {
+          if (p.avatarUrl) return p.avatarUrl;
+          if (p.hasAvatar) return `${Env.API_URL}/user/profiles/${p.userId}/avatar`;
+          return null;
+        }).filter(Boolean) as string[];
+        
+        void Image.prefetch(uris);
+      }
     } catch (err) {
       console.error("[Explore] Failed to fetch profiles:", err);
       setError("Impossible de charger les profils");
@@ -127,131 +237,42 @@ export default function ExploreTabScreen() {
     fetchProfiles();
   }, [fetchProfiles]);
 
-  const handleSwipeInteraction = useCallback(async (direction: SwipeDirection, profile: MatchingProfile) => {
+  const handleAction = useCallback(async (direction: SwipeDirection) => {
+    if (!currentProfile) return;
+    
+    const profileToProcess = currentProfile;
+    
+    // Move to next card immediately (no timeout, no animation)
+    const nextIndex = currentIndex + 1;
+    if (nextIndex >= profiles.length) {
+      fetchProfiles();
+    } else {
+      setCurrentIndex(nextIndex);
+    }
+
     try {
       const sessionToken = await getAccessToken();
       if (!sessionToken) return;
 
       if (direction === "right") {
-        const response = await likeUser(sessionToken, profile.userId);
+        const response = await likeUser(sessionToken, profileToProcess.userId);
         if (response.matched) {
           router.push({
             pathname: "/it-is-a-match",
             params: {
               matchId: response.matchId,
-              targetUserId: profile.userId,
-              targetName: profile.firstName || "Utilisateur",
+              targetUserId: profileToProcess.userId,
+              targetName: profileToProcess.firstName || "Utilisateur",
             }
           });
         }
       } else {
-        await dislikeUser(sessionToken, profile.userId);
+        await dislikeUser(sessionToken, profileToProcess.userId);
       }
     } catch (err) {
-      console.error(`[Explore] Failed to ${direction} user:`, err);
+      console.error(`[Explore] Failed to process ${direction}:`, err);
     }
-  }, [router]);
-
-  const moveToNextCard = useCallback(() => {
-    const nextIndex = currentIndex + 1;
-    if (nextIndex >= profiles.length) {
-      // Si plus de profils, on recharge
-      fetchProfiles();
-    } else {
-      setCurrentIndex(nextIndex);
-    }
-    translateX.value = 0;
-    translateY.value = 0;
-  }, [currentIndex, profiles.length, fetchProfiles, translateX, translateY]);
-
-  const triggerSwipe = useCallback(
-    (direction: SwipeDirection) => {
-      if (!currentProfile) return;
-
-      const directionValue = direction === "right" ? 1 : -1;
-
-      // Appel API en arrière-plan
-      handleSwipeInteraction(direction, currentProfile);
-
-      translateY.value = withTiming(0, { duration: 220 });
-      translateX.value = withTiming(
-        directionValue * EXIT_X,
-        { duration: 220 },
-        (finished) => {
-          if (finished) {
-            runOnJS(moveToNextCard)();
-          }
-        },
-      );
-    },
-    [currentProfile, handleSwipeInteraction, moveToNextCard, translateX, translateY],
-  );
-
-  const panGesture = Gesture.Pan()
-    .onUpdate((event) => {
-      translateX.value = event.translationX;
-      translateY.value = event.translationY;
-    })
-    .onEnd(() => {
-      if (Math.abs(translateX.value) > SWIPE_THRESHOLD) {
-        const directionValue = translateX.value > 0 ? 1 : -1;
-        const direction: SwipeDirection = translateX.value > 0 ? "right" : "left";
-
-        if (currentProfile) {
-          runOnJS(handleSwipeInteraction)(direction, currentProfile);
-        }
-
-        translateY.value = withTiming(0, { duration: 220 });
-        translateX.value = withTiming(
-          directionValue * EXIT_X,
-          { duration: 220 },
-          (finished) => {
-            if (finished) {
-              runOnJS(moveToNextCard)();
-            }
-          },
-        );
-        return;
-      }
-
-      translateX.value = withSpring(0, { damping: 14, stiffness: 170 });
-      translateY.value = withSpring(0, { damping: 14, stiffness: 170 });
-    });
-
-  const swipeCardStyle = useAnimatedStyle(() => {
-    const rotate = interpolate(
-      translateX.value,
-      [-SCREEN_WIDTH, 0, SCREEN_WIDTH],
-      [-14, 0, 14],
-      Extrapolation.CLAMP,
-    );
-
-    return {
-      transform: [
-        { translateX: translateX.value },
-        { translateY: translateY.value },
-        { rotate: `${rotate}deg` },
-      ],
-    };
-  });
-
-  const leftBadgeStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      translateX.value,
-      [-SWIPE_THRESHOLD, 0],
-      [1, 0],
-      Extrapolation.CLAMP,
-    ),
-  }));
-
-  const rightBadgeStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      translateX.value,
-      [0, SWIPE_THRESHOLD],
-      [0, 1],
-      Extrapolation.CLAMP,
-    ),
-  }));
+  }, [currentProfile, currentIndex, profiles.length, fetchProfiles, router]);
 
   if (loading && profiles.length === 0) {
     return (
@@ -283,7 +304,7 @@ export default function ExploreTabScreen() {
     );
   }
 
-  const avatarUriBase =
+  const avatarUriBaseTab =
     currentProfile?.hasAvatar === false
       ? null
       : currentProfile?.avatarUrl
@@ -292,9 +313,13 @@ export default function ExploreTabScreen() {
           ? `${Env.API_URL}/user/profiles/${currentProfile.userId}/avatar`
           : null;
 
-  const userAvatarSource = avatarUriBase
+  const cacheBreakerTab = currentProfile?.updatedAt
+    ? `?v=${new Date(currentProfile.updatedAt).getTime()}`
+    : "";
+
+  const userAvatarSource = avatarUriBaseTab
     ? {
-        uri: avatarUriBase,
+        uri: `${avatarUriBaseTab}${avatarUriBaseTab.includes("?") ? "&" : "?"}${cacheBreakerTab}`.replace(/[?&]$/, ""),
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       }
     : fallbackAvatar;
@@ -318,7 +343,6 @@ export default function ExploreTabScreen() {
               <Image
                 source={userAvatarSource}
                 style={styles.userAvatar}
-                transition={200}
                 cachePolicy="memory-disk"
               />
               <Text style={styles.userText}>
@@ -328,45 +352,27 @@ export default function ExploreTabScreen() {
           </View>
 
           <View style={styles.cardDeck}>
-            <GestureDetector gesture={panGesture}>
-              <Animated.View style={swipeCardStyle}>
-                <ExploreCard profile={currentProfile} token={token} />
-
-                <Animated.View
-                  style={[
-                    styles.swipeBadge,
-                    styles.swipeBadgeLeft,
-                    leftBadgeStyle,
-                  ]}
-                >
-                  <Text style={styles.swipeBadgeText}>NON</Text>
-                </Animated.View>
-
-                <Animated.View
-                  style={[
-                    styles.swipeBadge,
-                    styles.swipeBadgeRight,
-                    rightBadgeStyle,
-                  ]}
-                >
-                  <Text style={styles.swipeBadgeText}>LIKE</Text>
-                </Animated.View>
-              </Animated.View>
-            </GestureDetector>
+            <View>
+              <ExploreCard 
+                profile={currentProfile} 
+                token={token} 
+                onPressImage={() => router.push(`/user/${currentProfile.userId}`)}
+              />
+            </View>
           </View>
 
           <View style={styles.actionsRow}>
             <TouchableOpacity
               style={styles.actionButton}
               activeOpacity={0.8}
-              onPress={() => triggerSwipe("left")}
+              onPress={() => handleAction("left")}
             >
               <CloseIcon width={22} height={22} />
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionButton, styles.actionButtonPrimary]}
               activeOpacity={0.8}
-              onPress={() => triggerSwipe("right")}
+              onPress={() => handleAction("right")}
             >
               <StarIcon width={20} height={20} />
             </TouchableOpacity>
@@ -376,6 +382,8 @@ export default function ExploreTabScreen() {
     </ImageBackground>
   );
 }
+
+type SwipeDirection = "left" | "right";
 
 const styles = StyleSheet.create({
   background: {
@@ -445,7 +453,7 @@ const styles = StyleSheet.create({
   cover: {
     width: 170,
     height: 170,
-    borderRadius: 10,
+    borderRadius: 85,
     backgroundColor: "#1D2329",
   },
   progressRow: {
@@ -479,27 +487,6 @@ const styles = StyleSheet.create({
     backgroundColor: Palette.primary,
     alignItems: "center",
     justifyContent: "center",
-  },
-  swipeBadge: {
-    position: "absolute",
-    top: 30,
-    borderWidth: 2,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: "rgba(0,0,0,0.2)",
-  },
-  swipeBadgeLeft: {
-    left: 20,
-    borderColor: "#FF7474",
-  },
-  swipeBadgeRight: {
-    right: 20,
-    borderColor: "#7BE69A",
-  },
-  swipeBadgeText: {
-    ...Typography.bodyBold,
-    color: Palette.bgWhite,
   },
   actionsRow: {
     flexDirection: "row",

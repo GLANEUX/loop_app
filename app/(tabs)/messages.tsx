@@ -77,6 +77,7 @@ export default function MessagesTabScreen() {
         style={styles.container}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews={true}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -111,7 +112,6 @@ export default function MessagesTabScreen() {
                     <Image 
                       source={avatarUri ? { uri: avatarUri, headers: { Authorization: `Bearer ${token}` } } : fallbackAvatar} 
                       style={styles.friendAvatar}
-                      transition={200}
                       cachePolicy="memory-disk"
                     />
                     <Text style={styles.friendName} numberOfLines={1}>
@@ -147,7 +147,6 @@ export default function MessagesTabScreen() {
                     <Image 
                       source={avatarUri ? { uri: avatarUri, headers: { Authorization: `Bearer ${token}` } } : fallbackAvatar} 
                       style={styles.messageAvatar}
-                      transition={200}
                       cachePolicy="memory-disk"
                     />
                     {thread.unreadCount > 0 && (

@@ -1,4 +1,4 @@
-// app/_layout.tsx
+// app/(auth)/(onboarding)/_layout.tsx
 import { Palette } from "@/constants/theme";
 import { Stack } from "expo-router";
 import React from "react";
@@ -17,12 +17,15 @@ export default function OnboardingLayout() {
       <Stack.Screen name="oops" />
       <Stack.Screen name="name" />
       <Stack.Screen name="phone" />
+      <Stack.Screen name="sms-code" />
       <Stack.Screen name="birthdate" />
       <Stack.Screen name="gender" />
       <Stack.Screen name="styles" />
       <Stack.Screen name="skills" />
       <Stack.Screen name="avatar" />
       <Stack.Screen name="bio" />
+      <Stack.Screen name="upload-tracks" />
+      <Stack.Screen name="upload-success" />
       <Stack.Screen name="welcome-rules" />
     </Stack>
   );
